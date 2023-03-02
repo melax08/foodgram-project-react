@@ -69,3 +69,40 @@ class TagRecipe(models.Model):
     def __str__(self):
         return f'Тег: {self.tag} для рецепта {self.recipe}'
 
+
+class Favorite(models.Model):
+    user = models.ForeignKey(User,
+                             on_delete=models.CASCADE,
+                             related_name='favorites',
+                             verbose_name='Пользователь')
+    recipe = models.ForeignKey(Recipe,
+                               on_delete=models.CASCADE,
+                               related_name='followers',
+                               verbose_name='Рецепт')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_favorite'
+            )
+        ]
+
+
+class Cart(models.Model):
+    user = models.ForeignKey(User,
+                             on_delete=models.CASCADE,
+                             related_name='cart',
+                             verbose_name='Пользователь')
+    recipe = models.ForeignKey(Recipe,
+                               on_delete=models.CASCADE,
+                               related_name='in_cart',
+                               verbose_name='Рецепт')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='unique_cart'
+            )
+        ]
