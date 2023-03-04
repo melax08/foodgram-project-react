@@ -38,7 +38,7 @@ class Recipe(models.Model):
                                related_name='recipes',
                                verbose_name='Автор')
     name = models.CharField('Название рецепта', max_length=200)
-    image = models.ImageField('Изображение', upload_to='recipes/', blank=True)
+    image = models.ImageField('Изображение', upload_to='recipes/')
     text = models.TextField('Описание рецепта')
     ingredients = models.ManyToManyField(Ingredient,
                                          through='IngredientRecipe',
@@ -66,7 +66,8 @@ class IngredientRecipe(models.Model):
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE,
                                    verbose_name='Ингредиент')
     amount = models.IntegerField('Количество')
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, verbose_name='Рецепт')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,
+                               verbose_name='Рецепт')
 
     class Meta:
         verbose_name = "Ингредиент для рецепта"

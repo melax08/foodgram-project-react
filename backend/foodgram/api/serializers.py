@@ -1,7 +1,20 @@
+import base64
+
 from django.shortcuts import get_object_or_404
+from django.core.files.base import ContentFile
 from rest_framework import serializers
+
 from recipes.models import Tag, Ingredient, Recipe, Favorite, Cart, TagRecipe, IngredientRecipe
 from users.serializers import UserSerializer
+
+
+class Base64ImageField(serializers.ImageField):
+    def to_internal_value(self, data):
+        if isinstance(data, str) and data.startswith('data:image'):
+            format, imgstr = data.split(';base64,')
+            ext = format.split('/')[-1]
+            data = ContentFile(base64.b64decode(imgstr), name='temp.' + ext)
+        return super().to_internal_value(data)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -17,7 +30,8 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 
 class IngredientRecipeSerializer(serializers.ModelSerializer):
-    id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all())
+    id = serializers.PrimaryKeyRelatedField(queryset=Ingredient.objects.all(),
+                                            source='ingredient')
 
     class Meta:
         model = IngredientRecipe
@@ -29,7 +43,8 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(many=True,
                                               required=True,
                                               queryset=Tag.objects.all())
-    ingredients = IngredientRecipeSerializer(many=True)
+    ingredients = IngredientRecipeSerializer(many=True, write_only=True)
+    image = Base64ImageField()
 
     class Meta:
         model = Recipe
@@ -48,7 +63,8 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
         recipe = Recipe.objects.create(**validated_data)
         recipe.tags.set(tags)
         for ingredient in ingredients:
-            current_ingredient = get_object_or_404(Ingredient, name=ingredient.get('id'))
+            current_ingredient = get_object_or_404(
+                Ingredient, name=ingredient.get('ingredient').name)
             IngredientRecipe.objects.create(ingredient=current_ingredient,
                                             recipe=recipe,
                                             amount=ingredient.get('amount'))
@@ -76,6 +92,8 @@ class RecipeSerializer(serializers.ModelSerializer):
                   'cooking_time')
 
     def is_added(self, model, obj):
+        # if self.context.get('request') is None:
+        #     return False
         return model.objects.filter(
             user__username=self.context['request'].user,
             recipe=obj.id).exists()
