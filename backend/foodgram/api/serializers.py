@@ -70,6 +70,15 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
                                             amount=ingredient.get('amount'))
         return recipe
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['tags'] = TagSerializer(instance.tags.all(), many=True).data
+        data['ingredients'] = IngredientSerializer(instance.ingredients.all(),
+                                                   many=True).data
+        data['is_favorited'] = False
+        data['is_in_shopping_cart'] = False
+        return data
+
 
 class RecipeSerializer(serializers.ModelSerializer):
     is_favorited = serializers.SerializerMethodField()
