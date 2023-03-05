@@ -1,6 +1,9 @@
-from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
+from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet, GenericViewSet
+from rest_framework import mixins
+from rest_framework import permissions
 
-from .serializers import (TagSerializer, IngredientSerializer, RecipeSerializer, CreateRecipeSerializer)
+from .serializers import (TagSerializer, IngredientSerializer,
+                          RecipeSerializer, CreateRecipeSerializer)
 from recipes.models import Tag, Ingredient, Recipe
 
 
@@ -19,6 +22,7 @@ class IngredientViewSet(ReadOnlyModelViewSet):
 class RecipeViewSet(ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
+    # Тут кастомный пермишен с автором, безопасными методами и одменом
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
