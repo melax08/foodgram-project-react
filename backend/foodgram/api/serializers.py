@@ -4,7 +4,8 @@ from django.shortcuts import get_object_or_404
 from django.core.files.base import ContentFile
 from rest_framework import serializers
 
-from recipes.models import Tag, Ingredient, Recipe, Favorite, Cart, TagRecipe, IngredientRecipe
+from recipes.models import (Tag, Ingredient, Recipe, Favorite, Cart, TagRecipe,
+                            IngredientRecipe)
 from users.serializers import UserSerializer
 
 
@@ -24,9 +25,21 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class IngredientSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Ingredient
         fields = '__all__'
+
+
+class IngredientRecipeGetSerializer(serializers.ModelSerializer):
+    id = serializers.ReadOnlyField(source='ingredient.id')
+    name = serializers.ReadOnlyField(source='ingredient.name')
+    measurement_unit = serializers.ReadOnlyField(
+        source='ingredient.measurement_unit')
+
+    class Meta:
+        model = IngredientRecipe
+        fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
 class IngredientRecipeSerializer(serializers.ModelSerializer):
@@ -48,14 +61,8 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('id',
-                  'author',
-                  'tags',
-                  'ingredients',
-                  'name',
-                  'image',
-                  'text',
-                  'cooking_time')
+        fields = ('id', 'author', 'tags', 'ingredients', 'name', 'image',
+                  'text', 'cooking_time')
 
     def create(self, validated_data):
         ingredients = validated_data.pop('ingredients')
@@ -73,8 +80,8 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data['tags'] = TagSerializer(instance.tags.all(), many=True).data
-        data['ingredients'] = IngredientSerializer(instance.ingredients.all(),
-                                                   many=True).data
+        data['ingredients'] = IngredientRecipeGetSerializer(
+            instance.recipe_ingredients.all(), many=True).data
         data['is_favorited'] = False
         data['is_in_shopping_cart'] = False
         return data
@@ -85,24 +92,15 @@ class RecipeSerializer(serializers.ModelSerializer):
     is_in_shopping_cart = serializers.SerializerMethodField()
     author = UserSerializer(read_only=True)
     tags = TagSerializer(many=True)
-    ingredients = IngredientSerializer(many=True)
+    ingredients = IngredientRecipeGetSerializer(many=True, source='recipe_ingredients')
 
     class Meta:
         model = Recipe
-        fields = ('id',
-                  'tags',
-                  'author',
-                  'ingredients',
-                  'is_favorited',
-                  'is_in_shopping_cart',
-                  'name',
-                  'image',
-                  'text',
+        fields = ('id', 'tags', 'author', 'ingredients', 'is_favorited',
+                  'is_in_shopping_cart', 'name', 'image', 'text',
                   'cooking_time')
 
     def is_added(self, model, obj):
-        # if self.context.get('request') is None:
-        #     return False
         return model.objects.filter(
             user__username=self.context['request'].user,
             recipe=obj.id).exists()

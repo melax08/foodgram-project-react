@@ -63,11 +63,13 @@ class Recipe(models.Model):
 
 
 class IngredientRecipe(models.Model):
-    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE,
-                                   verbose_name='Ингредиент')
+    ingredient = models.ForeignKey(Ingredient,
+                                   on_delete=models.CASCADE,
+                                   verbose_name='Ингредиент',
+                                   related_name='ingredient_recipes')
     amount = models.IntegerField('Количество')
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,
-                               verbose_name='Рецепт')
+                               verbose_name='Рецепт', related_name='recipe_ingredients')
 
     class Meta:
         verbose_name = "Ингредиент для рецепта"

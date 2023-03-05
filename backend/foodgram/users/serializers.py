@@ -14,8 +14,6 @@ class UserSerializer(serializers.ModelSerializer):
                   'first_name', 'last_name', 'is_subscribed', 'password')
 
     def get_is_subscribed(self, obj):
-        # if self.context.get('request') is None:
-        #     return False
         return Follow.objects.filter(
             user__username=self.context['request'].user,
             author__username=obj.username).exists()
