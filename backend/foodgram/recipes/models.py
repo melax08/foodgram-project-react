@@ -4,7 +4,8 @@ from django.core.validators import MinValueValidator
 
 User = get_user_model()
 
-MINIMUM_COOKING_TIME = 1
+MIN_COOKING_TIME = 1
+MIN_AMOUNT_OF_INGREDIENTS = 1
 
 
 class Ingredient(models.Model):
@@ -50,7 +51,7 @@ class Recipe(models.Model):
                                   verbose_name='Теги')
     cooking_time = models.IntegerField(
         'Время приготовления в минутах',
-        validators=[MinValueValidator(MINIMUM_COOKING_TIME)])
+        validators=[MinValueValidator(MIN_COOKING_TIME)])
     pub_date = models.DateTimeField('Дата создания рецепта', auto_now_add=True)
 
     class Meta:
@@ -67,7 +68,9 @@ class IngredientRecipe(models.Model):
                                    on_delete=models.CASCADE,
                                    verbose_name='Ингредиент',
                                    related_name='ingredient_recipes')
-    amount = models.IntegerField('Количество')
+    amount = models.IntegerField(
+        'Количество',
+        validators=[MinValueValidator(MIN_AMOUNT_OF_INGREDIENTS)])
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,
                                verbose_name='Рецепт', related_name='recipe_ingredients')
 

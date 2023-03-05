@@ -7,6 +7,7 @@ from recipes.models import Tag, Ingredient, Recipe
 class TagViewSet(ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+    pagination_class = None
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
@@ -22,7 +23,14 @@ class RecipeViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+    def perform_update(self, serializer):
+        serializer.save(author=self.request.user)
+
     def get_serializer_class(self):
-        if self.action == 'create':
+        if self.action == 'create' or self.action == 'partial_update':
             return CreateRecipeSerializer
         return RecipeSerializer
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = False
+        return self.update(request, *args, **kwargs)

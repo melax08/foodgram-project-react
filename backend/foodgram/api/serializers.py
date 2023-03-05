@@ -54,7 +54,6 @@ class IngredientRecipeSerializer(serializers.ModelSerializer):
 class CreateRecipeSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
     tags = serializers.PrimaryKeyRelatedField(many=True,
-                                              required=True,
                                               queryset=Tag.objects.all())
     ingredients = IngredientRecipeSerializer(many=True, write_only=True)
     image = Base64ImageField()
@@ -77,6 +76,24 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
                                             amount=ingredient.get('amount'))
         return recipe
 
+    def update(self, instance, validated_data):
+        ingredients = validated_data.pop('ingredients')
+        tags = validated_data.pop('tags')
+        instance.tags.clear()
+        instance.ingredients.clear()
+        for key, data in validated_data.items():
+            setattr(instance, key, data)
+        instance.save()
+        instance.tags.set(tags)
+        for ingredient in ingredients:
+            current_ingredient = get_object_or_404(
+                Ingredient, name=ingredient.get('ingredient').name)
+            IngredientRecipe.objects.create(ingredient=current_ingredient,
+                                            recipe=instance,
+                                            amount=ingredient.get('amount'))
+
+        return instance
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data['tags'] = TagSerializer(instance.tags.all(), many=True).data
@@ -92,7 +109,8 @@ class RecipeSerializer(serializers.ModelSerializer):
     is_in_shopping_cart = serializers.SerializerMethodField()
     author = UserSerializer(read_only=True)
     tags = TagSerializer(many=True)
-    ingredients = IngredientRecipeGetSerializer(many=True, source='recipe_ingredients')
+    ingredients = IngredientRecipeGetSerializer(many=True,
+                                                source='recipe_ingredients')
 
     class Meta:
         model = Recipe
