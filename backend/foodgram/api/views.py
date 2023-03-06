@@ -1,10 +1,13 @@
+from rest_framework.decorators import action
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet, GenericViewSet
-from rest_framework import mixins
-from rest_framework import permissions
+from rest_framework.response import Response
+from rest_framework import permissions, serializers, status, mixins
+from django.shortcuts import get_object_or_404
 
 from .serializers import (TagSerializer, IngredientSerializer,
                           RecipeSerializer, CreateRecipeSerializer)
-from recipes.models import Tag, Ingredient, Recipe
+from recipes.models import Tag, Ingredient, Recipe, Favorite
+from core.serializers import RecipeShortInfoSerializer
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -38,3 +41,28 @@ class RecipeViewSet(ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         kwargs['partial'] = False
         return self.update(request, *args, **kwargs)
+
+    @action(methods=['post', 'delete'], detail=True,
+            permission_classes=(permissions.IsAuthenticated,))
+    def favorite(self, request, *args, **kwargs):
+        recipe = get_object_or_404(Recipe, pk=kwargs['pk'])
+        favorite_object = Favorite.objects.filter(user=request.user,
+                                                  recipe=recipe)
+        if request.method == 'POST':
+            if favorite_object.exists():
+                raise serializers.ValidationError(
+                    {'errors': 'Рецепт уже есть в избраном.'})
+            Favorite.objects.create(user=request.user, recipe=recipe)
+            return Response(RecipeShortInfoSerializer(recipe).data,
+                            status=status.HTTP_201_CREATED)
+
+        if not favorite_object.exists():
+            raise serializers.ValidationError(
+                {'errors': "Данного рецепта нет в избранном."}
+            )
+        favorite_object.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+

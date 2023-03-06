@@ -118,13 +118,13 @@ class RecipeSerializer(serializers.ModelSerializer):
                   'is_in_shopping_cart', 'name', 'image', 'text',
                   'cooking_time')
 
-    def is_added(self, model, obj):
+    def _is_added(self, model, obj):
         return model.objects.filter(
             user__username=self.context['request'].user,
             recipe=obj.id).exists()
 
     def get_is_favorited(self, obj):
-        return self.is_added(Favorite, obj)
+        return self._is_added(Favorite, obj)
 
     def get_is_in_shopping_cart(self, obj):
-        return self.is_added(Cart, obj)
+        return self._is_added(Cart, obj)

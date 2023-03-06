@@ -33,23 +33,22 @@ class CustomUserViewSet(UserViewSet):
 
     @action(detail=True, permission_classes=(permissions.IsAuthenticated,),
             methods=['post', 'delete'])
-    def subscribe(self, request, pk):
-        author = get_object_or_404(User, pk=pk)
+    def subscribe(self, request, *args, **kwargs):
+        author = get_object_or_404(User, pk=kwargs['id'])
+        follow_object = Follow.objects.filter(user=request.user, author=author)
         if request.method == 'POST':
             if request.user == author:
                 raise serializers.ValidationError(
                     {'errors': 'Вы не можете подписываться на самого себя!'})
-            if Follow.objects.filter(user=request.user,
-                                     author=author).exists():
+            if follow_object.exists():
                 raise serializers.ValidationError(
                     {'errors': 'Вы уже подписаны на этого пользователя.'})
             Follow.objects.create(user=request.user, author=author)
             return Response(self.get_serializer(author).data,
                             status=status.HTTP_201_CREATED)
 
-        follow = Follow.objects.filter(user=request.user, author=author)
-        if not follow.exists():
+        if not follow_object.exists():
             raise serializers.ValidationError(
                 {'errors': 'Вы не подписаны на этого автора.'})
-        follow.delete()
+        follow_object.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

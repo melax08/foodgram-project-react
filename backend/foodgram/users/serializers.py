@@ -2,13 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 
 from .models import User, Follow
-from recipes.models import Recipe
-
-
-class RecipeShortInfoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Recipe
-        fields = ('id', 'name', 'image', 'cooking_time')
+from core.serializers import RecipeShortInfoSerializer
 
 
 class UserSerializer(serializers.ModelSerializer):
