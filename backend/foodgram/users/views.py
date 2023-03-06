@@ -5,12 +5,17 @@ from rest_framework import permissions, status, serializers, mixins
 from django.shortcuts import get_object_or_404
 
 from .models import User, Follow
-from .serializers import UserSerializer
+from .serializers import UserSerializer, UserSubscribedSerializer
 
 
 class UserViewSet(ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'subscriptions' or self.action == 'subscribe':
+            return UserSubscribedSerializer
+        return UserSerializer
 
     @action(detail=False, permission_classes=(permissions.IsAuthenticated,))
     def me(self, request):

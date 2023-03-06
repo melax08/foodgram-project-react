@@ -2,6 +2,15 @@ from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from .models import User, Follow
 
+from recipes.models import Recipe
+# from api.serializers import RecipeShortInfoSerializer
+
+
+class RecipeShortInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
 
 class UserSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
@@ -15,6 +24,15 @@ class UserSerializer(serializers.ModelSerializer):
         return Follow.objects.filter(
             user__username=self.context['request'].user,
             author__username=obj.username).exists()
+
+
+class UserSubscribedSerializer(UserSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['recipes'] = RecipeShortInfoSerializer(instance.recipes,
+                                                    many=True).data
+        data['recipes_count'] = instance.recipes.count()
+        return data
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
