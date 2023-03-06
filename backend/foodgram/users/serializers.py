@@ -20,6 +20,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, max_length=150,
                                      validators=[validate_password])
+    # Протестировать, что-то с паролем, невозможно получить токен.
 
     class Meta:
         model = User
