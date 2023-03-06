@@ -1,25 +1,26 @@
 from rest_framework.decorators import action
-from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.response import Response
-from rest_framework import permissions, status, serializers, mixins
+from rest_framework import permissions, status, serializers
 from django.shortcuts import get_object_or_404
 
 from .models import User, Follow
-from .serializers import UserSerializer, UserSubscribedSerializer
+from .serializers import (UserSerializer,
+                          UserSubscribedSerializer,
+                          UserCreateSerializer)
+from djoser.views import UserViewSet
 
 
-class UserViewSet(ModelViewSet):
+class CustomUserViewSet(UserViewSet):
+    """Extended djoser user viewset with extra actions."""
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
     def get_serializer_class(self):
         if self.action == 'subscriptions' or self.action == 'subscribe':
             return UserSubscribedSerializer
-        return UserSerializer
-
-    @action(detail=False, permission_classes=(permissions.IsAuthenticated,),)
-    def me(self, request):
-        return Response(self.get_serializer(request.user).data)
+        if self.action == 'create':
+            return UserCreateSerializer
+        return super().get_serializer_class()
 
     @action(detail=False, permission_classes=(permissions.IsAuthenticated,),)
     def subscriptions(self, request):

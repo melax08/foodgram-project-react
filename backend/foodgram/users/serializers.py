@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import User, Follow
 
+from .models import User, Follow
 from recipes.models import Recipe
 
 
@@ -35,9 +35,10 @@ class UserSubscribedSerializer(UserSerializer):
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, max_length=150,
-                                     validators=[validate_password])
-    # Протестировать, что-то с паролем, невозможно получить токен.
+    password = serializers.CharField(max_length=150,
+                                     validators=[validate_password],
+                                     write_only=True,
+                                     )
 
     class Meta:
         model = User
