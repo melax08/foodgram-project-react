@@ -3,7 +3,6 @@ from django.contrib.auth.password_validation import validate_password
 from .models import User, Follow
 
 from recipes.models import Recipe
-# from api.serializers import RecipeShortInfoSerializer
 
 
 class RecipeShortInfoSerializer(serializers.ModelSerializer):

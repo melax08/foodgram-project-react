@@ -17,13 +17,17 @@ class UserViewSet(ModelViewSet):
             return UserSubscribedSerializer
         return UserSerializer
 
-    @action(detail=False, permission_classes=(permissions.IsAuthenticated,))
+    @action(detail=False, permission_classes=(permissions.IsAuthenticated,),)
     def me(self, request):
         return Response(self.get_serializer(request.user).data)
 
-    @action(detail=False, permission_classes=(permissions.IsAuthenticated,))
+    @action(detail=False, permission_classes=(permissions.IsAuthenticated,),)
     def subscriptions(self, request):
         following = User.objects.filter(following__user=request.user)
+        page = self.paginate_queryset(following)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
         return Response(self.get_serializer(following, many=True).data)
 
     @action(detail=True, permission_classes=(permissions.IsAuthenticated,),
@@ -34,7 +38,8 @@ class UserViewSet(ModelViewSet):
             if request.user == author:
                 raise serializers.ValidationError(
                     {'errors': 'Вы не можете подписываться на самого себя!'})
-            if Follow.objects.filter(user=request.user, author=author).exists():
+            if Follow.objects.filter(user=request.user,
+                                     author=author).exists():
                 raise serializers.ValidationError(
                     {'errors': 'Вы уже подписаны на этого пользователя.'})
             Follow.objects.create(user=request.user, author=author)
@@ -47,14 +52,3 @@ class UserViewSet(ModelViewSet):
                 {'errors': 'Вы не подписаны на этого автора.'})
         follow.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-
-
-
-# class FollowViewSet(mixins.ListModelMixin,
-#                     mixins.CreateModelMixin,
-#                     mixins.DestroyModelMixin,
-#                     GenericViewSet):
-#     queryset = Follow.objects.all()
-#     serializer_class = ...
