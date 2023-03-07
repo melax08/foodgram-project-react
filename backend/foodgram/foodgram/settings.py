@@ -126,7 +126,7 @@ USE_TZ = True
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -143,10 +143,10 @@ DJOSER = {
         'current_user': 'users.serializers.UserSerializer',
         'user_create': 'users.serializers.UserCreateSerializer'
     },
-    'PERMISSIONS': {
-        'user_list': ['rest_framework.permissions.AllowAny'],
-        'user': ['rest_framework.permissions.AllowAny']
-    },
+    # 'PERMISSIONS': {
+    #     'user_list': ['rest_framework.permissions.IsAuthenticated'],
+    #     'user': ['rest_framework.permissions.IsAuthenticated']
+    # },
     'HIDE_USERS': False
 }
 

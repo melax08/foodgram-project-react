@@ -8,8 +8,10 @@ from django.shortcuts import get_object_or_404
 
 from .serializers import (TagSerializer, IngredientSerializer,
                           RecipeSerializer, CreateRecipeSerializer)
-from recipes.models import Tag, Ingredient, Recipe, Favorite, Cart, IngredientRecipe
+from recipes.models import (Tag, Ingredient, Recipe, Favorite, Cart,
+                            IngredientRecipe)
 from core.serializers import RecipeShortInfoSerializer
+from core.permissions import IsAuthorOrAdminOrReadOnly
 
 SHOPPING_CART_HEADER = 'Ваш список покупок:'
 SHOPPING_CART_FOOTER = 'Foodgram - лучший сайт с рецептами.'
@@ -19,19 +21,21 @@ SHOPPING_CART_FILENAME = 'foodgram_shopping_list.txt'
 class TagViewSet(ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+    permission_classes = permissions.AllowAny,
     pagination_class = None
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
+    permission_classes = permissions.AllowAny,
     pagination_class = None
 
 
 class RecipeViewSet(ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
-    # Тут кастомный пермишен с автором, безопасными методами и одменом
+    permission_classes = IsAuthorOrAdminOrReadOnly,
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -42,14 +46,15 @@ class RecipeViewSet(ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'create' or self.action == 'partial_update':
             return CreateRecipeSerializer
+        if self.action == 'shopping_cart' or self.action == 'favorite':
+            return RecipeShortInfoSerializer
         return RecipeSerializer
 
     def partial_update(self, request, *args, **kwargs):
         kwargs['partial'] = False
         return self.update(request, *args, **kwargs)
 
-    @staticmethod
-    def _recipe_processing(request, model, pk):
+    def _recipe_processing(self, request, model, pk):
         recipe = get_object_or_404(Recipe, pk=pk)
         favorite_object = model.objects.filter(user=request.user,
                                                recipe=recipe)
@@ -58,7 +63,7 @@ class RecipeViewSet(ModelViewSet):
                 raise serializers.ValidationError(
                     {'errors': 'Рецепт уже добавлен.'})
             model.objects.create(user=request.user, recipe=recipe)
-            return Response(RecipeShortInfoSerializer(recipe).data,
+            return Response(self.get_serializer(recipe).data,
                             status=status.HTTP_201_CREATED)
 
         if not favorite_object.exists():
@@ -68,17 +73,15 @@ class RecipeViewSet(ModelViewSet):
         favorite_object.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(methods=['post', 'delete'], detail=True,
-            permission_classes=(permissions.IsAuthenticated,))
+    @action(methods=['post', 'delete'], detail=True)
     def favorite(self, request, *args, **kwargs):
         return self._recipe_processing(request, Favorite, kwargs['pk'])
 
-    @action(methods=['post', 'delete'], detail=True,
-            permission_classes=(permissions.IsAuthenticated,))
+    @action(methods=['post', 'delete'], detail=True)
     def shopping_cart(self, request, *args, **kwargs):
         return self._recipe_processing(request, Cart, kwargs['pk'])
 
-    @action(detail=False, permission_classes=(permissions.IsAuthenticated,))
+    @action(detail=False, permission_classes=[permissions.IsAuthenticated])
     def download_shopping_cart(self, request):
         ingredients_for_recipes = IngredientRecipe.objects.select_related(
             'ingredient', 'recipe')

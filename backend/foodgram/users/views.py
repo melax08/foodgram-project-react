@@ -1,6 +1,6 @@
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework import permissions, status, serializers
+from rest_framework import status, serializers
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 
@@ -11,7 +11,9 @@ from .serializers import (UserSerializer,
 
 
 class CustomUserViewSet(UserViewSet):
-    """Extended djoser user viewset with extra actions."""
+    """Extended djoser user viewset with extra actions
+    (subscribe and subscriptions).
+    """
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
@@ -22,7 +24,7 @@ class CustomUserViewSet(UserViewSet):
             return UserCreateSerializer
         return super().get_serializer_class()
 
-    @action(detail=False, permission_classes=(permissions.IsAuthenticated,),)
+    @action(detail=False)
     def subscriptions(self, request):
         following = User.objects.filter(following__user=request.user)
         page = self.paginate_queryset(following)
@@ -31,8 +33,7 @@ class CustomUserViewSet(UserViewSet):
             return self.get_paginated_response(serializer.data)
         return Response(self.get_serializer(following, many=True).data)
 
-    @action(detail=True, permission_classes=(permissions.IsAuthenticated,),
-            methods=['post', 'delete'])
+    @action(detail=True, methods=['post', 'delete'])
     def subscribe(self, request, *args, **kwargs):
         author = get_object_or_404(User, pk=kwargs['id'])
         follow_object = Follow.objects.filter(user=request.user, author=author)
