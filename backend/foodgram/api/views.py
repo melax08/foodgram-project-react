@@ -1,4 +1,5 @@
 from django.http import HttpResponse
+from django.db.models import Sum, F
 from rest_framework.decorators import action
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.response import Response
@@ -9,6 +10,10 @@ from .serializers import (TagSerializer, IngredientSerializer,
                           RecipeSerializer, CreateRecipeSerializer)
 from recipes.models import Tag, Ingredient, Recipe, Favorite, Cart, IngredientRecipe
 from core.serializers import RecipeShortInfoSerializer
+
+SHOPPING_CART_HEADER = 'Ваш список покупок:'
+SHOPPING_CART_FOOTER = 'Foodgram - лучший сайт с рецептами.'
+SHOPPING_CART_FILENAME = 'foodgram_shopping_list.txt'
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -46,7 +51,8 @@ class RecipeViewSet(ModelViewSet):
     @staticmethod
     def _recipe_processing(request, model, pk):
         recipe = get_object_or_404(Recipe, pk=pk)
-        favorite_object = model.objects.filter(user=request.user, recipe=recipe)
+        favorite_object = model.objects.filter(user=request.user,
+                                               recipe=recipe)
         if request.method == 'POST':
             if favorite_object.exists():
                 raise serializers.ValidationError(
@@ -74,26 +80,23 @@ class RecipeViewSet(ModelViewSet):
 
     @action(detail=False, permission_classes=(permissions.IsAuthenticated,))
     def download_shopping_cart(self, request):
-        final_list = {}
-        for cart_item in request.user.cart.all():
-            cur_recipe = cart_item.recipe
-            recipe_ings = cur_recipe.ingredients.all()
-            for ing in recipe_ings:
-                cur_ing = IngredientRecipe.objects.get(ingredient=ing,
-                                                       recipe=cur_recipe)
-                ingredient = cur_ing.ingredient.name
-                measurement_unit = cur_ing.ingredient.measurement_unit
-                amount = cur_ing.amount
-                if final_list.get(ingredient) is not None:
-                    final_list[ingredient][1] += amount
-                else:
-                    final_list[ingredient] = [measurement_unit, amount]
-        text = '\n'.join(
-            [f'{ingredient} - {misc[1]} {misc[0]}'
-             for ingredient, misc in final_list.items()])
-        file_name = 'foodgram_shopping_list.txt'
+        ingredients_for_recipes = IngredientRecipe.objects.select_related(
+            'ingredient', 'recipe')
+        user_cart = ingredients_for_recipes.filter(
+            recipe__in_cart__user=request.user)
+        user_cart_ingredients = user_cart.values(
+            'ingredient__name',
+            'ingredient__measurement_unit').annotate(total=Sum('amount'))
+        text = [SHOPPING_CART_HEADER]
+        text.extend([f'{ingredient["ingredient__name"]}'
+                     f' - {ingredient["total"]} '
+                     f'{ingredient["ingredient__measurement_unit"]}'
+                     for ingredient in user_cart_ingredients])
+        text.append(f'\n{SHOPPING_CART_FOOTER}')
+        text = '\n'.join(text)
         response = HttpResponse(text, content_type='text/plain')
-        response['Content-Disposition'] = f'attachment; filename={file_name}'
+        response['Content-Disposition'] = (
+            f'attachment; filename={SHOPPING_CART_FILENAME}')
         return response
 
 
