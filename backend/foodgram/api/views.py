@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from rest_framework.decorators import action
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.response import Response
@@ -6,7 +7,7 @@ from django.shortcuts import get_object_or_404
 
 from .serializers import (TagSerializer, IngredientSerializer,
                           RecipeSerializer, CreateRecipeSerializer)
-from recipes.models import Tag, Ingredient, Recipe, Favorite, Cart
+from recipes.models import Tag, Ingredient, Recipe, Favorite, Cart, IngredientRecipe
 from core.serializers import RecipeShortInfoSerializer
 
 
@@ -70,6 +71,30 @@ class RecipeViewSet(ModelViewSet):
             permission_classes=(permissions.IsAuthenticated,))
     def shopping_cart(self, request, *args, **kwargs):
         return self._recipe_processing(request, Cart, kwargs['pk'])
+
+    @action(detail=False, permission_classes=(permissions.IsAuthenticated,))
+    def download_shopping_cart(self, request):
+        final_list = {}
+        for cart_item in request.user.cart.all():
+            cur_recipe = cart_item.recipe
+            recipe_ings = cur_recipe.ingredients.all()
+            for ing in recipe_ings:
+                cur_ing = IngredientRecipe.objects.get(ingredient=ing,
+                                                       recipe=cur_recipe)
+                ingredient = cur_ing.ingredient.name
+                measurement_unit = cur_ing.ingredient.measurement_unit
+                amount = cur_ing.amount
+                if final_list.get(ingredient) is not None:
+                    final_list[ingredient][1] += amount
+                else:
+                    final_list[ingredient] = [measurement_unit, amount]
+        text = '\n'.join(
+            [f'{ingredient} - {misc[1]} {misc[0]}'
+             for ingredient, misc in final_list.items()])
+        file_name = 'foodgram_shopping_list.txt'
+        response = HttpResponse(text, content_type='text/plain')
+        response['Content-Disposition'] = f'attachment; filename={file_name}'
+        return response
 
 
 

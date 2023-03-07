@@ -2,12 +2,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import permissions, status, serializers
 from django.shortcuts import get_object_or_404
+from djoser.views import UserViewSet
 
 from .models import User, Follow
 from .serializers import (UserSerializer,
                           UserSubscribedSerializer,
                           UserCreateSerializer)
-from djoser.views import UserViewSet
 
 
 class CustomUserViewSet(UserViewSet):
