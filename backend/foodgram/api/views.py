@@ -1,10 +1,12 @@
 from django.http import HttpResponse
-from django.db.models import Sum, F
+from django.db.models import Sum
 from rest_framework.decorators import action
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.response import Response
 from rest_framework import permissions, serializers, status
 from django.shortcuts import get_object_or_404
+# from django_filters.rest_framework import DjangoFilterBackend
+from django_filters import rest_framework as filters
 
 from .serializers import (TagSerializer, IngredientSerializer,
                           RecipeSerializer, CreateRecipeSerializer)
@@ -32,10 +34,29 @@ class IngredientViewSet(ReadOnlyModelViewSet):
     pagination_class = None
 
 
+class RecipeFilter(filters.FilterSet):
+    tags = filters.ModelMultipleChoiceFilter(field_name='tags__slug',
+                                             to_field_name='slug',
+                                             queryset=Tag.objects.all())
+
+    class Meta:
+        model = Recipe
+        fields = ['tags']
+
+    # @staticmethod
+    # def tag_filter(queryset, _, value):
+    #     print(value)
+    #     print(queryset)
+    #     print(_)
+    #     return queryset.filter(tags__slug=value)
+
+
 class RecipeViewSet(ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = IsAuthorOrAdminOrReadOnly,
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_class = RecipeFilter
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
@@ -48,7 +69,7 @@ class RecipeViewSet(ModelViewSet):
             return CreateRecipeSerializer
         if self.action == 'shopping_cart' or self.action == 'favorite':
             return RecipeShortInfoSerializer
-        return RecipeSerializer
+        return self.serializer_class
 
     def partial_update(self, request, *args, **kwargs):
         kwargs['partial'] = False
