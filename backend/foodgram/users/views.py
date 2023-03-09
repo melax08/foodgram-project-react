@@ -19,7 +19,7 @@ class CustomUserViewSet(UserViewSet):
     http_method_names = ['get', 'post']
 
     def get_serializer_class(self):
-        if self.action == 'subscriptions' or self.action == 'subscribe':
+        if self.action in ('subscriptions', 'subscribe'):
             return UserSubscribedSerializer
         if self.action == 'create':
             return UserCreateSerializer

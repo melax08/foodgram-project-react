@@ -3,7 +3,7 @@ from django.db.models import Sum
 from rest_framework.decorators import action
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.response import Response
-from rest_framework import permissions, serializers, status
+from rest_framework import permissions, serializers, status, filters
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -32,6 +32,8 @@ class IngredientViewSet(ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     permission_classes = permissions.AllowAny,
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('^name',)
     pagination_class = None
 
 
@@ -49,9 +51,9 @@ class RecipeViewSet(ModelViewSet):
         serializer.save(author=self.request.user)
 
     def get_serializer_class(self):
-        if self.action == 'create' or self.action == 'partial_update':
+        if self.action in ('create', 'partial_update'):
             return CreateRecipeSerializer
-        if self.action == 'shopping_cart' or self.action == 'favorite':
+        if self.action in ('shopping_cart', 'favorite'):
             return RecipeShortInfoSerializer
         return self.serializer_class
 
