@@ -4,10 +4,19 @@ from .models import (Tag, Recipe, Ingredient, Favorite, Cart,
                      IngredientRecipe, TagRecipe)
 
 
+class TagInlineAdmin(admin.TabularInline):
+    model = Recipe.tags.through
+
+
+class IngredientInlineAdmin(admin.TabularInline):
+    model = Recipe.ingredients.through
+
+
 class RecipeAdmin(admin.ModelAdmin):
     list_display = ('name', 'author')
     list_filter = ('author', 'name', 'tags')
     readonly_fields = ('favorite_count',)
+    inlines = [TagInlineAdmin, IngredientInlineAdmin]
 
     @staticmethod
     def favorite_count(obj):
