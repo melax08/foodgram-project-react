@@ -5,9 +5,7 @@ from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.response import Response
 from rest_framework import permissions, serializers, status
 from django.shortcuts import get_object_or_404
-# from django_filters.rest_framework import DjangoFilterBackend
-from django_filters import rest_framework as filters
-from django.contrib.auth import get_user_model
+from django_filters.rest_framework import DjangoFilterBackend
 
 from .serializers import (TagSerializer, IngredientSerializer,
                           RecipeSerializer, CreateRecipeSerializer)
@@ -15,13 +13,12 @@ from recipes.models import (Tag, Ingredient, Recipe, Favorite, Cart,
                             IngredientRecipe, Favorite)
 from core.serializers import RecipeShortInfoSerializer
 from core.permissions import IsAuthorOrAdminOrReadOnly
+from .filters import RecipeFilter
 
 
 SHOPPING_CART_HEADER = 'Ваш список покупок:'
 SHOPPING_CART_FOOTER = 'Foodgram - лучший сайт с рецептами.'
 SHOPPING_CART_FILENAME = 'foodgram_shopping_list.txt'
-
-User = get_user_model()
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -38,37 +35,11 @@ class IngredientViewSet(ReadOnlyModelViewSet):
     pagination_class = None
 
 
-class RecipeFilter(filters.FilterSet):
-    tags = filters.ModelMultipleChoiceFilter(field_name='tags__slug',
-                                             to_field_name='slug',
-                                             queryset=Tag.objects.all())
-    is_favorited = filters.BooleanFilter(
-        method='is_favorited_filter')
-    is_in_shopping_cart = filters.BooleanFilter(
-        method='is_in_shopping_cart_filter')
-    author = filters.ModelMultipleChoiceFilter(field_name='author',
-                                               queryset=User.objects.all())
-
-    class Meta:
-        model = Recipe
-        fields = ['tags', 'author', 'is_favorited', 'is_in_shopping_cart']
-
-    def is_favorited_filter(self, queryset, _, value):
-        if value:
-            return queryset.filter(followers__user=self.request.user)
-        return queryset
-
-    def is_in_shopping_cart_filter(self, queryset, _, value):
-        if value:
-            return queryset.filter(in_cart__user=self.request.user)
-        return queryset
-
-
 class RecipeViewSet(ModelViewSet):
     queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = IsAuthorOrAdminOrReadOnly,
-    filter_backends = (filters.DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
 
     def perform_create(self, serializer):
@@ -135,7 +106,3 @@ class RecipeViewSet(ModelViewSet):
         response['Content-Disposition'] = (
             f'attachment; filename={SHOPPING_CART_FILENAME}')
         return response
-
-
-
-
