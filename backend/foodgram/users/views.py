@@ -16,6 +16,7 @@ class CustomUserViewSet(UserViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    http_method_names = ['get', 'post']
 
     def get_serializer_class(self):
         if self.action == 'subscriptions' or self.action == 'subscribe':
@@ -33,7 +34,8 @@ class CustomUserViewSet(UserViewSet):
             return self.get_paginated_response(serializer.data)
         return Response(self.get_serializer(following, many=True).data)
 
-    @action(detail=True, methods=['post', 'delete'])
+    @action(detail=True, methods=['post', 'delete'],
+            http_method_names=['post', 'delete'])
     def subscribe(self, request, *args, **kwargs):
         author = get_object_or_404(User, pk=kwargs['id'])
         follow_object = Follow.objects.filter(user=request.user, author=author)
