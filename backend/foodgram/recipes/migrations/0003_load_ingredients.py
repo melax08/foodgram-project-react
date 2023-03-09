@@ -9,14 +9,14 @@ with open('ingredients.json', 'r') as file:
 
 
 def add_ingredients(apps, schema_editor):
-    ingredient_model = apps.get_model("recipes", "Ingredient")
+    ingredient_model = apps.get_model('recipes', 'Ingredient')
     for ingredient in data:
         new_ingredient = ingredient_model(**ingredient)
         new_ingredient.save()
 
 
 def remove_ingredients(apps, schema_editor):
-    ingredient_model = apps.get_model("recipes", "Ingredient")
+    ingredient_model = apps.get_model('recipes', 'Ingredient')
     for ingredient in data:
         ingredient_model.objects.get(**ingredient).delete()
 
