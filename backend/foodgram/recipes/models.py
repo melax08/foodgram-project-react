@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 
+from .validators import validate_hex
+
 User = get_user_model()
 
 MIN_COOKING_TIME = 1
@@ -22,7 +24,10 @@ class Ingredient(models.Model):
 
 class Tag(models.Model):
     name = models.CharField('Название тега', max_length=200, unique=True)
-    color = models.CharField('Цвет', max_length=7, unique=True)
+    color = models.CharField('Цвет',
+                             max_length=7,
+                             unique=True,
+                             validators=[validate_hex])
     slug = models.SlugField('Слаг', max_length=200, unique=True)
 
     class Meta:
@@ -49,7 +54,7 @@ class Recipe(models.Model):
                                   through='TagRecipe',
                                   related_name='recipes',
                                   verbose_name='Теги')
-    cooking_time = models.IntegerField(
+    cooking_time = models.PositiveIntegerField(
         'Время приготовления в минутах',
         validators=[MinValueValidator(MIN_COOKING_TIME)])
     pub_date = models.DateTimeField('Дата создания рецепта', auto_now_add=True)
@@ -68,7 +73,7 @@ class IngredientRecipe(models.Model):
                                    on_delete=models.CASCADE,
                                    verbose_name='Ингредиент',
                                    related_name='ingredient_recipes')
-    amount = models.IntegerField(
+    amount = models.PositiveIntegerField(
         'Количество',
         validators=[MinValueValidator(MIN_AMOUNT_OF_INGREDIENTS)])
     recipe = models.ForeignKey(Recipe,
