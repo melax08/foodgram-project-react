@@ -3,11 +3,9 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 
 from .validators import validate_hex
+from .constants import MIN_COOKING_TIME, MIN_AMOUNT_OF_INGREDIENTS
 
 User = get_user_model()
-
-MIN_COOKING_TIME = 1
-MIN_AMOUNT_OF_INGREDIENTS = 1
 
 
 class Ingredient(models.Model):
@@ -55,8 +53,10 @@ class Recipe(models.Model):
                                   related_name='recipes',
                                   verbose_name='Теги')
     cooking_time = models.PositiveIntegerField(
-        'Время приготовления в минутах',
-        validators=[MinValueValidator(MIN_COOKING_TIME)])
+        'Время приготовления',
+        help_text='В минутах',
+        validators=[MinValueValidator(MIN_COOKING_TIME)]
+    )
     pub_date = models.DateTimeField('Дата создания рецепта', auto_now_add=True)
 
     class Meta:
@@ -75,7 +75,8 @@ class IngredientRecipe(models.Model):
                                    related_name='ingredient_recipes')
     amount = models.PositiveIntegerField(
         'Количество',
-        validators=[MinValueValidator(MIN_AMOUNT_OF_INGREDIENTS)])
+        validators=[MinValueValidator(MIN_AMOUNT_OF_INGREDIENTS)]
+    )
     recipe = models.ForeignKey(Recipe,
                                on_delete=models.CASCADE,
                                verbose_name='Рецепт',
@@ -93,9 +94,11 @@ class IngredientRecipe(models.Model):
 
 class TagRecipe(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE,
-                            related_name='tag_recipes')
+                            related_name='tag_recipes',
+                            verbose_name='Тэг')
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE,
-                               related_name='recipe_tags')
+                               related_name='recipe_tags',
+                               verbose_name='Рецепт')
 
     class Meta:
         verbose_name = 'Тег для рецепта'

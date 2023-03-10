@@ -4,7 +4,7 @@ from django.db import migrations
 from django.core.exceptions import ObjectDoesNotExist
 
 INITIAL_TAGS = [
-    {'name': 'Завтрак', 'color': '#FFFF00', 'slug': 'breakfast'},
+    {'name': 'Завтрак', 'color': '#F39C12', 'slug': 'breakfast'},
     {'name': 'Обед', 'color': '#ff0000', 'slug': 'lunch'},
     {'name': 'Ужин', 'color': '#00BFFF', 'slug': 'dinner'},
 ]

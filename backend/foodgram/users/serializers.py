@@ -5,13 +5,14 @@ from .models import User, Follow
 from core.serializers import RecipeShortInfoSerializer
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserGetRetrieveSerializer(serializers.ModelSerializer):
+    """Serializer for user model. Only GET requests."""
     is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ('email', 'id', 'username',
-                  'first_name', 'last_name', 'is_subscribed')
+        fields = ('email', 'id', 'username', 'first_name', 'last_name',
+                  'is_subscribed')
 
     def get_is_subscribed(self, obj):
         return Follow.objects.filter(
@@ -19,7 +20,9 @@ class UserSerializer(serializers.ModelSerializer):
             author__username=obj.username).exists()
 
 
-class UserSubscribedSerializer(UserSerializer):
+class UserSubscribeSerializer(UserGetRetrieveSerializer):
+    """Serializer for subscribe actions. Represent user with extra info like
+    user recipes and count of user recipes."""
     def to_representation(self, instance):
         data = super().to_representation(instance)
         recipes = RecipeShortInfoSerializer(instance.recipes, many=True)
@@ -38,15 +41,15 @@ class UserSubscribedSerializer(UserSerializer):
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
+    """Serializer for user model. Only POST requests."""
     password = serializers.CharField(max_length=150,
                                      validators=[validate_password],
-                                     write_only=True,
-                                     )
+                                     write_only=True)
 
     class Meta:
         model = User
-        fields = ('email', 'id', 'username',
-                  'first_name', 'last_name', 'password')
+        fields = ('email', 'id', 'username', 'first_name', 'last_name',
+                  'password')
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)

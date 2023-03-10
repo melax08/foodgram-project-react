@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 
 
 def validate_hex(value):
+    """Hex code validator for Tag color field."""
     find_hex = re.match('^#[0-9a-fA-F]{6}$', value)
     if not find_hex:
         raise ValidationError(

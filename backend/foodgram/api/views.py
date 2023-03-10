@@ -14,32 +14,32 @@ from recipes.models import (Tag, Ingredient, Recipe, Favorite, Cart,
 from core.serializers import RecipeShortInfoSerializer
 from core.permissions import IsAuthorOrAdminOrReadOnly
 from .filters import RecipeFilter
-
-
-SHOPPING_CART_HEADER = 'Ваш список покупок:'
-SHOPPING_CART_FOOTER = 'Foodgram - лучший сайт с рецептами.'
-SHOPPING_CART_FILENAME = 'foodgram_shopping_list.txt'
+from .constants import (SHOPPING_CART_HEADER, SHOPPING_CART_FILENAME,
+                        SHOPPING_CART_FOOTER)
 
 
 class TagViewSet(ReadOnlyModelViewSet):
+    """ViewSet for Tag model, only GET requests."""
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = permissions.AllowAny,
+    permission_classes = (permissions.AllowAny,)
     pagination_class = None
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
+    """ViewSet for Ingredient model, only GET requests."""
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    permission_classes = permissions.AllowAny,
+    permission_classes = (permissions.AllowAny,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('^name',)
     pagination_class = None
 
 
 class RecipeViewSet(ModelViewSet):
+    """ViewSet for Recipe model with extra actions."""
     serializer_class = RecipeSerializer
-    permission_classes = IsAuthorOrAdminOrReadOnly,
+    permission_classes = (IsAuthorOrAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     http_method_names = ['get', 'post', 'patch', 'delete']
@@ -88,14 +88,19 @@ class RecipeViewSet(ModelViewSet):
         if request.method == 'POST':
             if favorite_object.exists():
                 raise serializers.ValidationError(
-                    {'errors': 'Рецепт уже добавлен.'})
+                    {
+                        'errors': 'Рецепт уже добавлен.'
+                    }
+                )
             model.objects.create(user=request.user, recipe=recipe)
             return Response(self.get_serializer(recipe).data,
                             status=status.HTTP_201_CREATED)
 
         if not favorite_object.exists():
             raise serializers.ValidationError(
-                {'errors': "Данный рецепт не добавлен."}
+                {
+                    'errors': "Данный рецепт не добавлен."
+                }
             )
         favorite_object.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

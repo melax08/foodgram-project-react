@@ -141,8 +141,8 @@ REST_FRAMEWORK = {
 DJOSER = {
     'LOGIN_FIELD': 'email',
     'SERIALIZERS': {
-        'user': 'users.serializers.UserSerializer',
-        'current_user': 'users.serializers.UserSerializer',
+        'user': 'users.serializers.UserGetRetrieveSerializer',
+        'current_user': 'users.serializers.UserGetRetrieveSerializer',
         'user_create': 'users.serializers.UserCreateSerializer'
     },
     'PERMISSIONS': {
@@ -164,4 +164,3 @@ AUTH_USER_MODEL = 'users.User'
 
 # Temp cors settings
 CORS_ORIGIN_ALLOW_ALL = True
-# CORS_URLS_REGEX = r'^/api/.*$'

@@ -5,8 +5,8 @@ from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet
 
 from .models import User, Follow
-from .serializers import (UserSerializer,
-                          UserSubscribedSerializer,
+from .serializers import (UserGetRetrieveSerializer,
+                          UserSubscribeSerializer,
                           UserCreateSerializer)
 
 
@@ -15,12 +15,12 @@ class CustomUserViewSet(UserViewSet):
     (subscribe and subscriptions).
     """
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = UserGetRetrieveSerializer
     http_method_names = ['get', 'post']
 
     def get_serializer_class(self):
         if self.action in ('subscriptions', 'subscribe'):
-            return UserSubscribedSerializer
+            return UserSubscribeSerializer
         if self.action == 'create':
             return UserCreateSerializer
         return super().get_serializer_class()

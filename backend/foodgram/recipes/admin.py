@@ -1,18 +1,22 @@
 from django.contrib import admin
 
-from .models import (Tag, Recipe, Ingredient, Favorite, Cart,
-                     IngredientRecipe, TagRecipe)
+from .models import (Tag, Recipe, Ingredient, Favorite, Cart, TagRecipe,
+                     IngredientRecipe)
 
 
 class TagInlineAdmin(admin.TabularInline):
+    """Custom InLine field for represent many to many tags field in recipe."""
     model = Recipe.tags.through
 
 
 class IngredientInlineAdmin(admin.TabularInline):
+    """Custom InLine field for represent many to many ingredient field
+    in recipe."""
     model = Recipe.ingredients.through
 
 
 class RecipeAdmin(admin.ModelAdmin):
+    """Settings for recipe in admin panel."""
     list_display = ('name', 'author')
     list_filter = ('author', 'name', 'tags')
     readonly_fields = ('favorite_count',)
@@ -24,6 +28,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
 
 class IngredientAdmin(admin.ModelAdmin):
+    """Settings for ingredient in admin panel."""
     list_display = ('name', 'measurement_unit')
     list_filter = ('name',)
 
