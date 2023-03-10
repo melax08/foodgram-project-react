@@ -107,8 +107,8 @@ class CreateRecipeSerializer(serializers.ModelSerializer):
 
 
 class RecipeSerializer(serializers.ModelSerializer):
-    is_favorited = serializers.SerializerMethodField()
-    is_in_shopping_cart = serializers.SerializerMethodField()
+    is_favorited = serializers.BooleanField(default=False)
+    is_in_shopping_cart = serializers.BooleanField(default=False)
     author = UserSerializer(read_only=True)
     tags = TagSerializer(many=True)
     ingredients = IngredientRecipeGetSerializer(many=True,
@@ -119,14 +119,3 @@ class RecipeSerializer(serializers.ModelSerializer):
         fields = ('id', 'tags', 'author', 'ingredients', 'is_favorited',
                   'is_in_shopping_cart', 'name', 'image', 'text',
                   'cooking_time')
-
-    def _is_added(self, model, obj):
-        return model.objects.filter(
-            user__username=self.context['request'].user,
-            recipe=obj.id).exists()
-
-    def get_is_favorited(self, obj):
-        return self._is_added(Favorite, obj)
-
-    def get_is_in_shopping_cart(self, obj):
-        return self._is_added(Cart, obj)

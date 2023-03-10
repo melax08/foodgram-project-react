@@ -1,5 +1,5 @@
 from django.http import HttpResponse
-from django.db.models import Sum
+from django.db.models import Sum, Exists, OuterRef
 from rest_framework.decorators import action
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.response import Response
@@ -38,12 +38,31 @@ class IngredientViewSet(ReadOnlyModelViewSet):
 
 
 class RecipeViewSet(ModelViewSet):
-    queryset = Recipe.objects.all()
     serializer_class = RecipeSerializer
     permission_classes = IsAuthorOrAdminOrReadOnly,
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
     http_method_names = ['get', 'post', 'patch', 'delete']
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            queryset = Recipe.objects.annotate(
+                is_favorited=Exists(
+                    Favorite.objects.filter(
+                        user=self.request.user,
+                        recipe__pk=OuterRef('pk')
+                    )
+                ),
+                is_in_shopping_cart=Exists(
+                    Cart.objects.filter(
+                        user=self.request.user,
+                        recipe__pk=OuterRef('pk')
+                    )
+                )
+            )
+        else:
+            queryset = Recipe.objects.all()
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)

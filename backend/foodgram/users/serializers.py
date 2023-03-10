@@ -22,8 +22,17 @@ class UserSerializer(serializers.ModelSerializer):
 class UserSubscribedSerializer(UserSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data['recipes'] = RecipeShortInfoSerializer(instance.recipes,
-                                                    many=True).data
+        recipes = RecipeShortInfoSerializer(instance.recipes, many=True)
+        recipes_limit = self.context['request'].query_params.get(
+            'recipes_limit')
+        if recipes_limit is None:
+            data['recipes'] = recipes.data
+        elif not recipes_limit.isnumeric():
+            raise serializers.ValidationError(
+                {'recipes_limit': 'Параметр должен быть '
+                                  'положительным целым числом.'})
+        else:
+            data['recipes'] = recipes.data[:int(recipes_limit)]
         data['recipes_count'] = instance.recipes.count()
         return data
 
