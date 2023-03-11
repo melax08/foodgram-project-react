@@ -23,12 +23,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = get_random_secret_key()
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', default=get_random_secret_key())
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = int(os.getenv('DJANGO_DEBUG', default=1))
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', default='*').split()
 
 
 # Application definition
@@ -167,11 +167,10 @@ DJOSER = {
 
 STATIC_URL = '/static_backend/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static_backend')
+
+# Media files (uploaded by users)
 MEDIA_URL = '/media_backend/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media_backend')
 
 # Custom user model
 AUTH_USER_MODEL = 'users.User'
-
-# Temp cors settings
-CORS_ORIGIN_ALLOW_ALL = True
