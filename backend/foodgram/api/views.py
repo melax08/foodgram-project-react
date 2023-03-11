@@ -1,21 +1,22 @@
+from django.db.models import Exists, OuterRef, Sum
 from django.http import HttpResponse
-from django.db.models import Sum, Exists, OuterRef
-from rest_framework.decorators import action
-from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
-from rest_framework.response import Response
-from rest_framework import permissions, serializers, status, filters
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, permissions, serializers, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from .serializers import (TagSerializer, IngredientSerializer,
-                          RecipeSerializer, CreateRecipeSerializer)
-from recipes.models import (Tag, Ingredient, Recipe, Favorite, Cart,
-                            IngredientRecipe, Favorite)
-from core.serializers import RecipeShortInfoSerializer
 from core.permissions import IsAuthorOrAdminOrReadOnly
+from core.serializers import RecipeShortInfoSerializer
+from recipes.models import (Cart, Favorite, Ingredient, IngredientRecipe,
+                            Recipe, Tag)
+
+from .constants import (SHOPPING_CART_FILENAME, SHOPPING_CART_FOOTER,
+                        SHOPPING_CART_HEADER)
 from .filters import RecipeFilter
-from .constants import (SHOPPING_CART_HEADER, SHOPPING_CART_FILENAME,
-                        SHOPPING_CART_FOOTER)
+from .serializers import (CreateRecipeSerializer, IngredientSerializer,
+                          RecipeSerializer, TagSerializer)
 
 
 class TagViewSet(ReadOnlyModelViewSet):

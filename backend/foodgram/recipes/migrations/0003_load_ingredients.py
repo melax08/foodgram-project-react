@@ -4,7 +4,6 @@ import json
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import migrations
 
-
 with open('ingredients.json', 'r') as file:
     data = json.load(file)
 

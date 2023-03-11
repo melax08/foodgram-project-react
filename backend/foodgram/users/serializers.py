@@ -1,8 +1,9 @@
-from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
+from rest_framework import serializers
 
-from .models import User, Follow
 from core.serializers import RecipeShortInfoSerializer
+
+from .models import Follow, User
 
 
 class UserGetRetrieveSerializer(serializers.ModelSerializer):
@@ -52,5 +53,4 @@ class UserCreateSerializer(serializers.ModelSerializer):
                   'password')
 
     def create(self, validated_data):
-        user = User.objects.create_user(**validated_data)
-        return user
+        return User.objects.create_user(**validated_data)

@@ -1,10 +1,9 @@
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase, APIClient
-from django.contrib.auth import get_user_model
-from rest_framework.test import force_authenticate
+from rest_framework.test import APIClient, APITestCase
 
-from recipes.models import Recipe, Tag, Ingredient
+from recipes.models import Ingredient, Tag
 
 User = get_user_model()
 
@@ -20,7 +19,6 @@ class RecipeTests(APITestCase):
 
     def setUp(self):
         self.authorized_client = APIClient()
-        # self.authorized_client.force_login(self.user)
 
     def test_get_recipe(self):
         """Smoke test. Anonim user can see the recipes."""
@@ -29,25 +27,3 @@ class RecipeTests(APITestCase):
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    # def test_create_recipe(self):
-    #     """
-    #     Ensure user can create a recipe.
-    #     """
-    #     # url = reverse('api:recipes')
-    #     data = {
-    #         'ingredients': [{
-    #             "id": 1,
-    #             "amount": 5
-    #         }],
-    #         'tags': [1],
-    #         'image': 'data:image/png;base64,iVBORw0K',
-    #         'name': 'Boiled potato',
-    #         'text': 'Very delicious',
-    #         'cooking_time': 5
-    #     }
-    #     response = self.authorized_client.post('/api/recipes/', data, format='json')
-    #     force_authenticate(response, user=self.authorized_client)
-    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-    #     self.assertEqual(Recipe.objects.count(), 1)
-    #     self.assertEqual(Recipe.objects.get().name, 'Boiled potato')

@@ -1,9 +1,9 @@
-from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
+from django.db import models
 
+from .constants import MIN_AMOUNT_OF_INGREDIENTS, MIN_COOKING_TIME
 from .validators import validate_hex
-from .constants import MIN_COOKING_TIME, MIN_AMOUNT_OF_INGREDIENTS
 
 User = get_user_model()
 

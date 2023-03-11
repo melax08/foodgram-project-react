@@ -1,12 +1,11 @@
 import base64
 
-from django.shortcuts import get_object_or_404
 from django.core.files.base import ContentFile
+from django.shortcuts import get_object_or_404
 from django.utils.crypto import get_random_string
 from rest_framework import serializers
 
-from recipes.models import (Tag, Ingredient, Recipe, Favorite, Cart, TagRecipe,
-                            IngredientRecipe)
+from recipes.models import Ingredient, IngredientRecipe, Recipe, Tag
 from users.serializers import UserGetRetrieveSerializer
 
 
