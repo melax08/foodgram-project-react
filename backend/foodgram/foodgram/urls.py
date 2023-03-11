@@ -22,7 +22,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('users.urls'), name='user'),
     path('api/auth/', include('djoser.urls.authtoken')),
-    path('api/', include('api.urls'), name='api')
+    path('api/', include('api.urls', namespace='api'), name='api')
 ]
 
 if settings.DEBUG:
