@@ -17,7 +17,7 @@ services:
     depends_on:
       - db
   backend:
-    build: ../backend/foodgram
+    image: screamoff/foodgram:latest
     restart: always
     volumes:
       - static_value:/app/static_backend/
