@@ -400,4 +400,4 @@
   }
 }
 
-export default new Api(process.env.API_URL || 'http://localhost', { 'content-type': 'application/json' })
+export default new Api(process.env.API_URL || 'http://foodgram.2241.ru', { 'content-type': 'application/json' })
