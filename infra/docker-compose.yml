@@ -9,11 +9,9 @@ services:
       - ./.env
 
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
+    image: screamoff/foodgram-frontend:latest
     volumes:
-      - ../frontend/:/app/result_build/
+      - frontend:/app/result_build/
     depends_on:
       - db
   backend:
@@ -32,14 +30,16 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ../frontend/build:/usr/share/nginx/html/
+      - frontend:/usr/share/nginx/html/
       - ../docs/:/usr/share/nginx/html/api/docs/
       - static_value:/var/html/static_backend/
       - media_value:/var/html/media_backend/
     depends_on:
       - backend
+      - frontend
 
 volumes:
+  frontend:
   database:
   static_value:
   media_value:

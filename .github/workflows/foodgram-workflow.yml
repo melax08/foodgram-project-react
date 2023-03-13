@@ -61,7 +61,7 @@ jobs:
           script: |
             cd infra
             sudo docker-compose stop
-            sudo docker-compose rm backend
+            sudo docker-compose rm backend frontend
             > .env
             echo DJANGO_DEBUG=0 >> .env
             echo DJANGO_ALLOWED_HOSTS=foodgram.2241.ru 127.0.0.1 localhost testserver >> .env
