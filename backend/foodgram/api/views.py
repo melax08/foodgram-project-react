@@ -9,7 +9,6 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from core.permissions import IsAuthorOrAdminOrReadOnly
-from core.serializers import RecipeShortInfoSerializer
 from recipes.models import (Cart, Favorite, Ingredient, IngredientRecipe,
                             Recipe, Tag)
 from users.models import Follow, User
@@ -18,9 +17,9 @@ from .constants import (SHOPPING_CART_FILENAME, SHOPPING_CART_FOOTER,
                         SHOPPING_CART_HEADER)
 from .filters import RecipeFilter
 from .serializers import (CreateRecipeSerializer, IngredientSerializer,
-                          RecipeSerializer, TagSerializer,
-                          UserCreateSerializer, UserGetRetrieveSerializer,
-                          UserSubscribeSerializer)
+                          RecipeSerializer, RecipeShortInfoSerializer,
+                          TagSerializer, UserCreateSerializer,
+                          UserGetRetrieveSerializer, UserSubscribeSerializer)
 
 
 class TagViewSet(ReadOnlyModelViewSet):
