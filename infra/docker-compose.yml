@@ -8,9 +8,7 @@ services:
     env_file:
       - ./.env
   frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
+    image: screamoff/foodgram-frontend:latest
     volumes:
       - ../frontend/:/app/result_build/
     depends_on:
