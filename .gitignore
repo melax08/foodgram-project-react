@@ -133,4 +133,6 @@ dmypy.json
 
 media
 .DS_Store
+media_backend
+static_backend
 
