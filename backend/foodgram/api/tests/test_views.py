@@ -9,6 +9,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient, APITestCase, override_settings
 
 from recipes.models import Ingredient, Recipe, Tag
+from users.models import Follow
 
 from .fixtures import base64img
 
@@ -35,6 +36,11 @@ class RecipeTests(APITestCase):
                                            cooking_time=10)
         Token.objects.create(user=RecipeTests.user)
         cls.token = Token.objects.get(user__username='TestUser')
+        cls.another_user = User.objects.create_user(username='SecondUser',
+                                                    password='SecondPass',
+                                                    email='second@2241.ru')
+        Token.objects.create(user=RecipeTests.another_user)
+        cls.another_token = Token.objects.get(user__username='SecondUser')
 
     @classmethod
     def tearDownClass(cls):
@@ -46,9 +52,14 @@ class RecipeTests(APITestCase):
         self.authorized_client = APIClient()
         self.authorized_client.credentials(
             HTTP_AUTHORIZATION='Token ' + self.token.key)
+        self.authorized_client_second = APIClient()
+        self.authorized_client_second.credentials(
+            HTTP_AUTHORIZATION='Token ' + self.another_token.key)
 
     def test_api_create_recipe(self):
-        """Authorized user can add recipes and anonymous is not."""
+        """Authorized user can add recipes and anonymous is not.
+        the author of the recipe is automatically
+        set to the user who send request."""
         current_recipes_count = Recipe.objects.count()
         data = {
             'ingredients': [{
@@ -61,13 +72,17 @@ class RecipeTests(APITestCase):
             'text': 'Very delicious',
             'cooking_time': 5
         }
+        # Authenticated user can create a recipe.
         auth_response = self.authorized_client.post(
             reverse('api:recipes-list'), data, format='json')
         self.assertEqual(auth_response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Recipe.objects.count(), current_recipes_count + 1)
         self.assertEqual(Recipe.objects.first().name, 'Boiled potato')
 
-        # Anonim user try to create recipe via POST-request
+        # Author of boiled potato is request user.
+        self.assertEqual(Recipe.objects.first().author, RecipeTests.user)
+
+        # Anonymous can't create a recipe
         anonim_response = self.guest_client.post(
             reverse('api:recipes-list'), data, format='json')
         self.assertEqual(anonim_response.status_code,
@@ -80,6 +95,8 @@ class RecipeTests(APITestCase):
         with GET-requests."""
         urls = {
             reverse('api:recipes-list'): status.HTTP_200_OK,
+            reverse('api:recipes-detail',
+                    kwargs={'pk': RecipeTests.recipe.id}): status.HTTP_200_OK,
             reverse(
                 'api:recipes-download-shopping-cart'
             ): status.HTTP_401_UNAUTHORIZED,
@@ -109,6 +126,8 @@ class RecipeTests(APITestCase):
         """Authorized user gets the right response codes with GET-requests."""
         urls = {
             reverse('api:recipes-list'): status.HTTP_200_OK,
+            reverse('api:recipes-detail',
+                    kwargs={'pk': RecipeTests.recipe.id}): status.HTTP_200_OK,
             reverse(
                 'api:recipes-download-shopping-cart'
             ): status.HTTP_200_OK,
@@ -206,3 +225,127 @@ class RecipeTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Token.objects.filter(
             user__username=user.username).exists())
+
+    def test_api_patch_recipe(self):
+        """Users can modify itself recipes via PATCH-requests."""
+        recipes_count = Recipe.objects.count()
+        new_text = 'More nice taste'
+        data = {
+            'ingredients': [{
+                "id": 1,
+                "amount": 666
+            }],
+            'tags': [1],
+            'image': base64img,
+            'name': 'Fried chicken',
+            'text': new_text,
+            'cooking_time': 1000
+        }
+        url = reverse('api:recipes-detail', kwargs={
+            'pk': RecipeTests.recipe.id})
+
+        response = self.authorized_client.patch(
+            url,
+            data,
+            format='json'
+        )
+
+        # Author can modify recipe
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Recipe.objects.first().text, new_text)
+        self.assertEqual(Recipe.objects.count(), recipes_count)
+
+        # Guest can't modify recipes
+        data['text'] = 'Guest recipe!!!'
+        guest_response = self.guest_client.patch(url, data, format='json')
+        self.assertEqual(guest_response.status_code,
+                         status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(Recipe.objects.first().text, new_text)
+        self.assertEqual(Recipe.objects.count(), recipes_count)
+
+        # Only author can modify recipe
+        data['text'] = "I also can change someone else's recipe!"
+        another_user_response = self.authorized_client_second.patch(
+            url,
+            data,
+            format='json'
+        )
+        self.assertEqual(another_user_response.status_code,
+                         status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Recipe.objects.first().text, new_text)
+        self.assertEqual(Recipe.objects.count(), recipes_count)
+
+    def test_api_delete_recipe(self):
+        """Users can delete itself recipes via DELETE-requests."""
+        recipe = Recipe.objects.create(author=RecipeTests.user,
+                                       text="Kill me please",
+                                       cooking_time=1)
+        recipes_count = Recipe.objects.count()
+
+        url = reverse('api:recipes-detail', kwargs={'pk': recipe.id})
+
+        # Guest can't delete recipe
+        guest_response = self.guest_client.delete(url)
+        self.assertEqual(guest_response.status_code,
+                         status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(Recipe.objects.count(), recipes_count)
+
+        # Only author can delete recipe
+        another_user_response = self.authorized_client_second.delete(url)
+        self.assertEqual(another_user_response.status_code,
+                         status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Recipe.objects.count(), recipes_count)
+
+        # Author can delete recipe
+        author_response = self.authorized_client.delete(url)
+        self.assertEqual(author_response.status_code,
+                         status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Recipe.objects.count(), recipes_count - 1)
+
+    def test_api_user_subscribe(self):
+        """Authorized user can subscribe to authors."""
+        count_of_follows = Follow.objects.count()
+        url = reverse('api:users-subscribe',
+                    kwargs={'id': RecipeTests.another_user.id})
+        response = self.authorized_client.post(url)
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Follow.objects.count(), count_of_follows + 1)
+        self.assertTrue(Follow.objects.filter(
+            user=RecipeTests.user,
+            author=RecipeTests.another_user
+        ).exists())
+
+        count_of_follows = Follow.objects.count()
+
+        # Can't subscribe twice to the same author
+        response = self.authorized_client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Follow.objects.count(), count_of_follows)
+
+        # Can't subscribe itself
+        response = self.authorized_client.post(reverse(
+            'api:users-subscribe', kwargs={'id': RecipeTests.user.id}))
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Follow.objects.count(), count_of_follows)
+
+        # Guest can't subscribe
+        guest_response = self.guest_client.post(url)
+        self.assertEqual(guest_response.status_code,
+                         status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(Follow.objects.count(), count_of_follows)
+
+    def test_api_user_unsubscribe(self):
+        """Authorized user can unsubscribe from author."""
+        pass
+
+    def test_api_recipe_follow_unfollow(self):
+        pass
+
+    def test_api_recipe_shopping_cart(self):
+        pass
+
+    def test_api_download_shopping_cart(self):
+        pass
+
+
