@@ -1,3 +1,4 @@
+import json
 import shutil
 import tempfile
 
@@ -8,7 +9,7 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient, APITestCase, override_settings
 
-from recipes.models import Ingredient, Recipe, Tag
+from recipes.models import Favorite, Ingredient, Recipe, Tag
 from users.models import Follow
 
 from .fixtures import base64img
@@ -306,7 +307,7 @@ class RecipeTests(APITestCase):
         """Authorized user can subscribe to authors."""
         count_of_follows = Follow.objects.count()
         url = reverse('api:users-subscribe',
-                    kwargs={'id': RecipeTests.another_user.id})
+                      kwargs={'id': RecipeTests.another_user.id})
         response = self.authorized_client.post(url)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -329,6 +330,12 @@ class RecipeTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(Follow.objects.count(), count_of_follows)
 
+        # Can't subscribe to non-existent author
+        response = self.authorized_client.post(reverse(
+            'api:users-subscribe', kwargs={'id': 666}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(Follow.objects.count(), count_of_follows)
+
         # Guest can't subscribe
         guest_response = self.guest_client.post(url)
         self.assertEqual(guest_response.status_code,
@@ -337,15 +344,142 @@ class RecipeTests(APITestCase):
 
     def test_api_user_unsubscribe(self):
         """Authorized user can unsubscribe from author."""
-        pass
+        url = reverse('api:users-subscribe',
+                      kwargs={'id': RecipeTests.another_user.id})
+        Follow.objects.create(user=RecipeTests.user,
+                              author=RecipeTests.another_user)
+        count_of_follows = Follow.objects.count()
 
-    def test_api_recipe_follow_unfollow(self):
-        pass
+        # Guest can't unsubscribe
+        guest_response = self.guest_client.delete(url)
+        self.assertEqual(guest_response.status_code,
+                         status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(Follow.objects.count(), count_of_follows)
+
+        # Can't unsubscribe from non-existent author
+        response = self.authorized_client.delete(
+            reverse('api:users-subscribe', kwargs={'id': 666}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(Follow.objects.count(), count_of_follows)
+
+        # User can unsubscribe from author
+        response = self.authorized_client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Follow.objects.count(), count_of_follows - 1)
+        self.assertFalse(Follow.objects.filter(
+            user=RecipeTests.user,
+            author=RecipeTests.another_user
+        ).exists())
+
+        # A user cannot unsubscribe from an author they are not following
+        response = self.authorized_client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Follow.objects.count(), count_of_follows - 1)
+
+    def test_api_user_subscriptions_list(self):
+        """The user can see who he is subscribed to."""
+        url = reverse('api:users-subscriptions')
+        Follow.objects.create(user=RecipeTests.another_user,
+                              author=RecipeTests.user)
+
+        expected_data = {
+            'email': RecipeTests.user.email,
+            'id': RecipeTests.user.id,
+            'username': RecipeTests.user.username,
+            'first_name': '',
+            'last_name': '',
+            'is_subscribed': True,
+            'recipes': [
+                {
+                    'id': RecipeTests.recipe.id,
+                    'name': RecipeTests.recipe.name,
+                    'image': RecipeTests.recipe.image.url,
+                    'cooking_time': RecipeTests.recipe.cooking_time
+                }
+            ],
+            'recipes_count': RecipeTests.user.recipes.count()
+        }
+
+        # Guest can't see the subscriptions list
+        guest_response = self.guest_client.get(url, format='json')
+        self.assertEqual(guest_response.status_code,
+                         status.HTTP_401_UNAUTHORIZED)
+        self.assertIsNotNone(guest_response.data.get('detail'))
+
+        # The user can see who he is subscribed to.
+        response = self.authorized_client_second.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            json.loads(
+                json.dumps(response.data.get('results')[0])
+            ), expected_data)
+
+    def test_api_recipe_add_to_favorite(self):
+        """Authorized user can add recipe to favorite."""
+        favorites_count = Favorite.objects.count()
+        url = reverse('api:recipes-favorite',
+                      kwargs={'pk': RecipeTests.recipe.id})
+
+        # Guest can't add recipe to favorite
+        guest_response = self.guest_client.post(url)
+        self.assertEqual(guest_response.status_code,
+                         status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(favorites_count, Favorite.objects.count())
+
+        # Can't add non-existent recipe to favorite
+        response = self.authorized_client_second.post(
+            reverse('api:recipes-favorite', kwargs={'pk': 666}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(Favorite.objects.count(), favorites_count)
+        self.assertFalse(Favorite.objects.filter(user=RecipeTests.another_user,
+                                                 recipe=666))
+
+        # User can add recipe to favorite
+        response = self.authorized_client_second.post(url)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Favorite.objects.count(), favorites_count + 1)
+        self.assertTrue(Favorite.objects.filter(
+            user=RecipeTests.another_user, recipe=RecipeTests.recipe).exists())
+
+        # User can't add the same recipe to favorite again
+        response = self.authorized_client_second.post(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Favorite.objects.count(), favorites_count + 1)
+
+    def test_api_recipe_delete_from_favorite(self):
+        """Authorized user can delete recipe from favorite."""
+        url = reverse('api:recipes-favorite',
+                      kwargs={'pk': RecipeTests.recipe.id})
+        Favorite.objects.create(user=RecipeTests.another_user,
+                                recipe=RecipeTests.recipe)
+        favorites_count = Favorite.objects.count()
+
+        # Guest can't delete recipe from favorite
+        guest_response = self.guest_client.delete(url)
+        self.assertEqual(guest_response.status_code,
+                         status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(favorites_count, Favorite.objects.count())
+
+        # User can't delete non-existent recipe
+        response = self.authorized_client_second.delete(
+            reverse('api:recipes-favorite', kwargs={'pk': 666}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(favorites_count, Favorite.objects.count())
+
+        # User can delete recipe from favorite
+        response = self.authorized_client_second.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Favorite.objects.count(), favorites_count - 1)
+        self.assertFalse(Favorite.objects.filter(
+            user=RecipeTests.another_user, recipe=RecipeTests.recipe).exists())
+
+        # User can't delete recipe from favorite twice
+        response = self.authorized_client_second.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Favorite.objects.count(), favorites_count - 1)
 
     def test_api_recipe_shopping_cart(self):
         pass
 
     def test_api_download_shopping_cart(self):
         pass
-
-
