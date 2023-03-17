@@ -5,7 +5,7 @@ from rest_framework.test import override_settings
 from recipes.models import Tag
 from recipes.validators import validate_hex
 
-from .fixtures import Fixture, TEMP_MEDIA_ROOT
+from .fixtures import TEMP_MEDIA_ROOT, Fixture
 
 User = get_user_model()
 

@@ -10,7 +10,7 @@ from api.constants import SHOPPING_CART_FOOTER, SHOPPING_CART_HEADER
 from recipes.models import Cart, Favorite, Recipe
 from users.models import Follow
 
-from .fixtures import Fixture, base64img, TEMP_MEDIA_ROOT
+from .fixtures import TEMP_MEDIA_ROOT, Fixture, base64img
 
 User = get_user_model()
 
@@ -70,12 +70,12 @@ class RecipeTests(Fixture):
             reverse('api:ingredients-list'):
                 (status.HTTP_200_OK, status.HTTP_200_OK),
             reverse('api:ingredients-detail',
-                    kwargs={ 'pk': RecipeTests.ingredient.id }):
+                    kwargs={'pk': RecipeTests.ingredient.id}):
                 (status.HTTP_200_OK, status.HTTP_200_OK),
             reverse('api:users-list'):
                 (status.HTTP_401_UNAUTHORIZED, status.HTTP_200_OK),
             reverse('api:users-detail',
-                    kwargs={ 'id': RecipeTests.user.id }):
+                    kwargs={'id': RecipeTests.user.id}):
                 (status.HTTP_401_UNAUTHORIZED, status.HTTP_200_OK),
             reverse('api:users-subscriptions'):
                 (status.HTTP_401_UNAUTHORIZED, status.HTTP_200_OK),
