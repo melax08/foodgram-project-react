@@ -1,8 +1,5 @@
 import json
-import shutil
-import tempfile
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
@@ -13,19 +10,13 @@ from api.constants import SHOPPING_CART_FOOTER, SHOPPING_CART_HEADER
 from recipes.models import Cart, Favorite, Recipe
 from users.models import Follow
 
-from .fixtures import Fixture, base64img
+from .fixtures import Fixture, base64img, TEMP_MEDIA_ROOT
 
 User = get_user_model()
-
-TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class RecipeTests(Fixture):
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_api_create_recipe(self):
         """Authorized user can add recipes and anonymous is not.
@@ -61,68 +52,52 @@ class RecipeTests(Fixture):
         self.assertEqual(Recipe.objects.count(), current_recipes_count + 1)
         self.assertEqual(Recipe.objects.first().name, 'Boiled potato')
 
+    def _check_response_status_codes(self, is_auth):
+        """Method to check GET requests from auth users and guests."""
+        urls = {
+            reverse('api:recipes-list'):
+                (status.HTTP_200_OK, status.HTTP_200_OK),
+            reverse('api:recipes-detail',
+                    kwargs={'pk': RecipeTests.recipe.id}):
+                (status.HTTP_200_OK, status.HTTP_200_OK),
+            reverse('api:recipes-download-shopping-cart'):
+                (status.HTTP_401_UNAUTHORIZED, status.HTTP_200_OK),
+            reverse('api:tags-list'):
+                (status.HTTP_200_OK, status.HTTP_200_OK),
+            reverse('api:tags-detail',
+                    kwargs={'pk': RecipeTests.tag.id}):
+                (status.HTTP_200_OK, status.HTTP_200_OK),
+            reverse('api:ingredients-list'):
+                (status.HTTP_200_OK, status.HTTP_200_OK),
+            reverse('api:ingredients-detail',
+                    kwargs={ 'pk': RecipeTests.ingredient.id }):
+                (status.HTTP_200_OK, status.HTTP_200_OK),
+            reverse('api:users-list'):
+                (status.HTTP_401_UNAUTHORIZED, status.HTTP_200_OK),
+            reverse('api:users-detail',
+                    kwargs={ 'id': RecipeTests.user.id }):
+                (status.HTTP_401_UNAUTHORIZED, status.HTTP_200_OK),
+            reverse('api:users-subscriptions'):
+                (status.HTTP_401_UNAUTHORIZED, status.HTTP_200_OK),
+            reverse('api:users-me'):
+                (status.HTTP_401_UNAUTHORIZED, status.HTTP_200_OK),
+            'unexists-url':
+                (status.HTTP_404_NOT_FOUND, status.HTTP_404_NOT_FOUND),
+        }
+        client = self.authorized_client if is_auth else self.guest_client
+        for url, status_code in urls.items():
+            with self.subTest(url=url):
+                response = client.get(url, format='json')
+                self.assertEqual(response.status_code, status_code[is_auth])
+
     def test_api_anonymous_user_requests(self):
         """Unauthorized user gets the right response codes
         with GET-requests."""
-        urls = {
-            reverse('api:recipes-list'): status.HTTP_200_OK,
-            reverse('api:recipes-detail',
-                    kwargs={'pk': RecipeTests.recipe.id}): status.HTTP_200_OK,
-            reverse(
-                'api:recipes-download-shopping-cart'
-            ): status.HTTP_401_UNAUTHORIZED,
-            reverse('api:tags-list'): status.HTTP_200_OK,
-            reverse('api:tags-detail',
-                    kwargs={'pk': RecipeTests.tag.id}): status.HTTP_200_OK,
-            reverse('api:ingredients-list'): status.HTTP_200_OK,
-            reverse('api:ingredients-detail',
-                    kwargs={
-                        'pk': RecipeTests.ingredient.id
-                    }): status.HTTP_200_OK,
-            reverse('api:users-list'): status.HTTP_401_UNAUTHORIZED,
-            reverse('api:users-detail',
-                    kwargs={
-                        'id': RecipeTests.user.id
-                    }): status.HTTP_401_UNAUTHORIZED,
-            reverse('api:users-subscriptions'): status.HTTP_401_UNAUTHORIZED,
-            reverse('api:users-me'): status.HTTP_401_UNAUTHORIZED,
-            'unexists-url': status.HTTP_404_NOT_FOUND
-        }
-        for url, status_code in urls.items():
-            with self.subTest(url=url):
-                response = self.guest_client.get(url, format='json')
-                self.assertEqual(response.status_code, status_code)
+        self._check_response_status_codes(is_auth=False)
 
     def test_api_authorized_user_requests(self):
         """Authorized user gets the right response codes with GET-requests."""
-        urls = {
-            reverse('api:recipes-list'): status.HTTP_200_OK,
-            reverse('api:recipes-detail',
-                    kwargs={'pk': RecipeTests.recipe.id}): status.HTTP_200_OK,
-            reverse(
-                'api:recipes-download-shopping-cart'
-            ): status.HTTP_200_OK,
-            reverse('api:tags-list'): status.HTTP_200_OK,
-            reverse('api:tags-detail',
-                    kwargs={'pk': RecipeTests.tag.id}): status.HTTP_200_OK,
-            reverse('api:ingredients-list'): status.HTTP_200_OK,
-            reverse('api:ingredients-detail',
-                    kwargs={
-                        'pk': RecipeTests.ingredient.id
-                    }): status.HTTP_200_OK,
-            reverse('api:users-list'): status.HTTP_200_OK,
-            reverse('api:users-detail',
-                    kwargs={
-                        'id': RecipeTests.user.id
-                    }): status.HTTP_200_OK,
-            reverse('api:users-subscriptions'): status.HTTP_200_OK,
-            reverse('api:users-me'): status.HTTP_200_OK,
-            'unexists-url': status.HTTP_404_NOT_FOUND
-        }
-        for url, status_code in urls.items():
-            with self.subTest(url=url):
-                response = self.authorized_client.get(url, format='json')
-                self.assertEqual(response.status_code, status_code)
+        self._check_response_status_codes(is_auth=True)
 
     def test_api_anonymous_user_register(self):
         """Anonymous user can create an account."""

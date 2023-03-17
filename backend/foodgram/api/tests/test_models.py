@@ -1,7 +1,3 @@
-import shutil
-import tempfile
-
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from rest_framework.test import override_settings
@@ -9,19 +5,13 @@ from rest_framework.test import override_settings
 from recipes.models import Tag
 from recipes.validators import validate_hex
 
-from .fixtures import Fixture
+from .fixtures import Fixture, TEMP_MEDIA_ROOT
 
 User = get_user_model()
-
-TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class ModelsTests(Fixture):
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_hex_validator(self):
         """Test HEX color validator for color field."""
