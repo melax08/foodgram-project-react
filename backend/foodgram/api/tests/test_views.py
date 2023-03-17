@@ -7,14 +7,13 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from rest_framework.test import APIClient, APITestCase, override_settings
+from rest_framework.test import APIClient, override_settings
 
 from api.constants import SHOPPING_CART_FOOTER, SHOPPING_CART_HEADER
-from recipes.models import (Cart, Favorite, Ingredient, IngredientRecipe,
-                            Recipe, Tag)
+from recipes.models import Cart, Favorite, Recipe
 from users.models import Follow
 
-from .fixtures import base64img
+from .fixtures import Fixture, base64img
 
 User = get_user_model()
 
@@ -22,48 +21,11 @@ TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
-class RecipeTests(APITestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.user = User.objects.create_user(username='TestUser',
-                                            password='ItSTOOhard3',
-                                            email='test@2241.ru')
-        cls.tag = Tag.objects.create(name='test', color='#FF0000', slug='test')
-        cls.ingredient = Ingredient.objects.create(name='Potato',
-                                                   measurement_unit='kg')
-        cls.recipe = Recipe.objects.create(author=RecipeTests.user,
-                                           name='Fried chicken',
-                                           image=base64img,
-                                           text='Nice taste',
-                                           cooking_time=10)
-        cls.recipe_ingredient = IngredientRecipe.objects.create(
-            ingredient=RecipeTests.ingredient,
-            amount=2,
-            recipe=RecipeTests.recipe
-        )
-
-        Token.objects.create(user=RecipeTests.user)
-        cls.token = Token.objects.get(user__username='TestUser')
-        cls.another_user = User.objects.create_user(username='SecondUser',
-                                                    password='SecondPass',
-                                                    email='second@2241.ru')
-        Token.objects.create(user=RecipeTests.another_user)
-        cls.another_token = Token.objects.get(user__username='SecondUser')
-
+class RecipeTests(Fixture):
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
-
-    def setUp(self):
-        self.guest_client = APIClient()
-        self.authorized_client = APIClient()
-        self.authorized_client.credentials(
-            HTTP_AUTHORIZATION='Token ' + self.token.key)
-        self.authorized_client_second = APIClient()
-        self.authorized_client_second.credentials(
-            HTTP_AUTHORIZATION='Token ' + self.another_token.key)
 
     def test_api_create_recipe(self):
         """Authorized user can add recipes and anonymous is not.
@@ -313,6 +275,7 @@ class RecipeTests(APITestCase):
 
     def test_api_user_subscribe(self):
         """Authorized user can subscribe to authors."""
+        Follow.objects.all().delete()
         count_of_follows = Follow.objects.count()
         url = reverse('api:users-subscribe',
                       kwargs={'id': RecipeTests.another_user.id})
@@ -354,8 +317,6 @@ class RecipeTests(APITestCase):
         """Authorized user can unsubscribe from author."""
         url = reverse('api:users-subscribe',
                       kwargs={'id': RecipeTests.another_user.id})
-        Follow.objects.create(user=RecipeTests.user,
-                              author=RecipeTests.another_user)
         count_of_follows = Follow.objects.count()
 
         # Guest can't unsubscribe
@@ -424,6 +385,7 @@ class RecipeTests(APITestCase):
 
     def _add_to_favorite_or_cart(self, reverse_url: str, manager):
         """Method for check add action for favorite and cart."""
+        manager.objects.all().delete()
         objects_count = manager.objects.count()
         url = reverse(reverse_url,
                       kwargs={'pk': RecipeTests.recipe.id})
@@ -465,8 +427,6 @@ class RecipeTests(APITestCase):
     def _delete_from_favorite_or_cart(self, reverse_url, manager):
         """Method for check delete action from favorite and cart."""
         url = reverse(reverse_url, kwargs={'pk': RecipeTests.recipe.id})
-        manager.objects.create(user=RecipeTests.another_user,
-                               recipe=RecipeTests.recipe)
         objects_count = manager.objects.count()
 
         # Guest can't delete object
@@ -504,8 +464,6 @@ class RecipeTests(APITestCase):
     def test_api_download_shopping_cart(self):
         """Authorized user can download shopping list."""
         url = reverse('api:recipes-download-shopping-cart')
-        Cart.objects.create(user=RecipeTests.another_user,
-                            recipe=RecipeTests.recipe)
 
         # Anonymous user can't download list of shopping cart
         guest_response = self.guest_client.get(url)
