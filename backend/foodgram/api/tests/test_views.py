@@ -9,7 +9,9 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient, APITestCase, override_settings
 
-from recipes.models import Favorite, Ingredient, Recipe, Tag
+from api.constants import SHOPPING_CART_FOOTER, SHOPPING_CART_HEADER
+from recipes.models import (Cart, Favorite, Ingredient, IngredientRecipe,
+                            Recipe, Tag)
 from users.models import Follow
 
 from .fixtures import base64img
@@ -35,6 +37,12 @@ class RecipeTests(APITestCase):
                                            image=base64img,
                                            text='Nice taste',
                                            cooking_time=10)
+        cls.recipe_ingredient = IngredientRecipe.objects.create(
+            ingredient=RecipeTests.ingredient,
+            amount=2,
+            recipe=RecipeTests.recipe
+        )
+
         Token.objects.create(user=RecipeTests.user)
         cls.token = Token.objects.get(user__username='TestUser')
         cls.another_user = User.objects.create_user(username='SecondUser',
@@ -414,72 +422,103 @@ class RecipeTests(APITestCase):
                 json.dumps(response.data.get('results')[0])
             ), expected_data)
 
-    def test_api_recipe_add_to_favorite(self):
-        """Authorized user can add recipe to favorite."""
-        favorites_count = Favorite.objects.count()
-        url = reverse('api:recipes-favorite',
+    def _add_to_favorite_or_cart(self, reverse_url: str, manager):
+        """Method for check add action for favorite and cart."""
+        objects_count = manager.objects.count()
+        url = reverse(reverse_url,
                       kwargs={'pk': RecipeTests.recipe.id})
 
-        # Guest can't add recipe to favorite
+        # Guest can't add object to favorite
         guest_response = self.guest_client.post(url)
         self.assertEqual(guest_response.status_code,
                          status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(favorites_count, Favorite.objects.count())
+        self.assertEqual(objects_count, manager.objects.count())
 
-        # Can't add non-existent recipe to favorite
+        # Can't add non-existent object to favorite
         response = self.authorized_client_second.post(
-            reverse('api:recipes-favorite', kwargs={'pk': 666}))
+            reverse(reverse_url, kwargs={'pk': 666}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(Favorite.objects.count(), favorites_count)
-        self.assertFalse(Favorite.objects.filter(user=RecipeTests.another_user,
-                                                 recipe=666))
+        self.assertEqual(manager.objects.count(), objects_count)
+        self.assertFalse(manager.objects.filter(user=RecipeTests.another_user,
+                                                recipe=666))
 
-        # User can add recipe to favorite
+        # User can add object to favorite
         response = self.authorized_client_second.post(url)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Favorite.objects.count(), favorites_count + 1)
-        self.assertTrue(Favorite.objects.filter(
+        self.assertEqual(manager.objects.count(), objects_count + 1)
+        self.assertTrue(manager.objects.filter(
             user=RecipeTests.another_user, recipe=RecipeTests.recipe).exists())
 
-        # User can't add the same recipe to favorite again
+        # User can't add the same object to favorite again
         response = self.authorized_client_second.post(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(Favorite.objects.count(), favorites_count + 1)
+        self.assertEqual(manager.objects.count(), objects_count + 1)
 
-    def test_api_recipe_delete_from_favorite(self):
-        """Authorized user can delete recipe from favorite."""
-        url = reverse('api:recipes-favorite',
-                      kwargs={'pk': RecipeTests.recipe.id})
-        Favorite.objects.create(user=RecipeTests.another_user,
-                                recipe=RecipeTests.recipe)
-        favorites_count = Favorite.objects.count()
+    def test_api_recipe_add_to_favorite(self):
+        """Authorized user can add recipe to favorite."""
+        self._add_to_favorite_or_cart('api:recipes-favorite', Favorite)
 
-        # Guest can't delete recipe from favorite
+    def test_api_recipe_add_to_shopping_cart(self):
+        """Authorized user can add recipe to shopping cart."""
+        self._add_to_favorite_or_cart('api:recipes-shopping-cart', Cart)
+
+    def _delete_from_favorite_or_cart(self, reverse_url, manager):
+        """Method for check delete action from favorite and cart."""
+        url = reverse(reverse_url, kwargs={'pk': RecipeTests.recipe.id})
+        manager.objects.create(user=RecipeTests.another_user,
+                               recipe=RecipeTests.recipe)
+        objects_count = manager.objects.count()
+
+        # Guest can't delete object
         guest_response = self.guest_client.delete(url)
         self.assertEqual(guest_response.status_code,
                          status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(favorites_count, Favorite.objects.count())
+        self.assertEqual(objects_count, manager.objects.count())
 
-        # User can't delete non-existent recipe
+        # User can't delete non-existent object
         response = self.authorized_client_second.delete(
-            reverse('api:recipes-favorite', kwargs={'pk': 666}))
+            reverse(reverse_url, kwargs={'pk': 666}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(favorites_count, Favorite.objects.count())
+        self.assertEqual(objects_count, manager.objects.count())
 
         # User can delete recipe from favorite
         response = self.authorized_client_second.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(Favorite.objects.count(), favorites_count - 1)
-        self.assertFalse(Favorite.objects.filter(
+        self.assertEqual(manager.objects.count(), objects_count - 1)
+        self.assertFalse(manager.objects.filter(
             user=RecipeTests.another_user, recipe=RecipeTests.recipe).exists())
 
         # User can't delete recipe from favorite twice
         response = self.authorized_client_second.delete(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(Favorite.objects.count(), favorites_count - 1)
+        self.assertEqual(manager.objects.count(), objects_count - 1)
 
-    def test_api_recipe_shopping_cart(self):
-        pass
+    def test_api_recipe_delete_from_favorite(self):
+        """Authorized user can delete recipe from favorite."""
+        self._delete_from_favorite_or_cart('api:recipes-favorite', Favorite)
+
+    def test_api_recipe_delete_from_shopping_cart(self):
+        """Authorized user can delete recipe from shopping cart."""
+        self._delete_from_favorite_or_cart('api:recipes-shopping-cart', Cart)
 
     def test_api_download_shopping_cart(self):
-        pass
+        """Authorized user can download shopping list."""
+        url = reverse('api:recipes-download-shopping-cart')
+        Cart.objects.create(user=RecipeTests.another_user,
+                            recipe=RecipeTests.recipe)
+
+        # Anonymous user can't download list of shopping cart
+        guest_response = self.guest_client.get(url)
+        self.assertEqual(guest_response.status_code,
+                         status.HTTP_401_UNAUTHORIZED)
+        self.assertIsNotNone(guest_response.data.get('detail'))
+
+        # Authorized use can download shopping list with actual ingredients
+        response = self.authorized_client_second.get(url)
+        rec_ing_mes = RecipeTests.recipe_ingredient.ingredient.measurement_unit
+        expected_output = (f'{SHOPPING_CART_HEADER}\n'
+                           f'{RecipeTests.recipe_ingredient.ingredient.name}'
+                           f' - {RecipeTests.recipe_ingredient.amount} '
+                           f'{rec_ing_mes}\n\n'
+                           f'{SHOPPING_CART_FOOTER}')
+        self.assertEqual(response.content.decode(), expected_output)
