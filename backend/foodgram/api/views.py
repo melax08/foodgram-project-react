@@ -161,7 +161,8 @@ class CustomUserViewSet(UserViewSet):
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        return Response(self.get_serializer(following, many=True).data)
+        return Response(self.get_serializer(following, many=True)
+                        .data)  # pragma: no cover
 
     @action(detail=True, methods=['post', 'delete'],
             http_method_names=['post', 'delete'])

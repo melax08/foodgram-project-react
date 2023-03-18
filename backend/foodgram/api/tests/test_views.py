@@ -314,21 +314,26 @@ class RecipeTests(Fixture):
         """The user can see who he is subscribed to."""
         url = reverse('api:users-subscriptions')
         expected_data = {
-            'email': RecipeTests.another_user.email,
-            'id': RecipeTests.another_user.id,
-            'username': RecipeTests.another_user.username,
-            'first_name': '',
-            'last_name': '',
-            'is_subscribed': True,
-            'recipes': [
-                {
-                    'id': RecipeTests.another_recipe.id,
-                    'name': RecipeTests.another_recipe.name,
-                    'image': RecipeTests.another_recipe.image.url,
-                    'cooking_time': RecipeTests.another_recipe.cooking_time
-                }
-            ],
-            'recipes_count': RecipeTests.another_user.recipes.count()
+            'count': 1,
+            'next': None,
+            'previous': None,
+            'results': [{
+                'email': RecipeTests.another_user.email,
+                'id': RecipeTests.another_user.id,
+                'username': RecipeTests.another_user.username,
+                'first_name': '',
+                'last_name': '',
+                'is_subscribed': True,
+                'recipes': [
+                    {
+                        'id': RecipeTests.another_recipe.id,
+                        'name': RecipeTests.another_recipe.name,
+                        'image': RecipeTests.another_recipe.image.url,
+                        'cooking_time': RecipeTests.another_recipe.cooking_time
+                    }
+                ],
+                'recipes_count': RecipeTests.another_user.recipes.count()
+            }]
         }
 
         # Guest can't see the subscriptions list
@@ -340,10 +345,7 @@ class RecipeTests(Fixture):
         # The user can see who he is subscribed to.
         response = self.authorized_client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            json.loads(
-                json.dumps(response.data.get('results')[0])
-            ), expected_data)
+        self.assertEqual(json.loads(json.dumps(response.data)), expected_data)
 
     def _add_to_favorite_or_cart(self, reverse_url: str, manager):
         """Method for check add action for favorite and cart."""

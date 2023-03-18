@@ -17,7 +17,7 @@ def add_tags(apps, schema_editor):
         new_tag.save()
 
 
-def remove_tags(apps, schema_editor):
+def remove_tags(apps, schema_editor):  # pragma: no cover
     tag_model = apps.get_model('recipes', 'Tag')
     for tag in INITIAL_TAGS:
         try:

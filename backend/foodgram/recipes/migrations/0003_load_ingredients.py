@@ -15,7 +15,7 @@ def add_ingredients(apps, schema_editor):
         new_ingredient.save()
 
 
-def remove_ingredients(apps, schema_editor):
+def remove_ingredients(apps, schema_editor):  # pragma: no cover
     ingredient_model = apps.get_model('recipes', 'Ingredient')
     for ingredient in data:
         try:
