@@ -198,7 +198,8 @@ class RecipeTests(Fixture):
 
         # Author can modify recipe
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(Recipe.objects.first().text, new_text)
+        self.assertEqual(Recipe.objects.get(id=RecipeTests.recipe.id).text,
+                         new_text)
         self.assertEqual(Recipe.objects.count(), recipes_count)
 
         # Guest can't modify recipes
@@ -206,7 +207,8 @@ class RecipeTests(Fixture):
         guest_response = self.guest_client.patch(url, data, format='json')
         self.assertEqual(guest_response.status_code,
                          status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(Recipe.objects.first().text, new_text)
+        self.assertEqual(Recipe.objects.get(id=RecipeTests.recipe.id).text,
+                         new_text)
         self.assertEqual(Recipe.objects.count(), recipes_count)
 
         # Only author can modify recipe
@@ -218,7 +220,8 @@ class RecipeTests(Fixture):
         )
         self.assertEqual(another_user_response.status_code,
                          status.HTTP_403_FORBIDDEN)
-        self.assertEqual(Recipe.objects.first().text, new_text)
+        self.assertEqual(Recipe.objects.get(id=RecipeTests.recipe.id).text,
+                         new_text)
         self.assertEqual(Recipe.objects.count(), recipes_count)
 
     def test_api_delete_recipe(self):
@@ -323,25 +326,22 @@ class RecipeTests(Fixture):
     def test_api_user_subscriptions_list(self):
         """The user can see who he is subscribed to."""
         url = reverse('api:users-subscriptions')
-        Follow.objects.create(user=RecipeTests.another_user,
-                              author=RecipeTests.user)
-
         expected_data = {
-            'email': RecipeTests.user.email,
-            'id': RecipeTests.user.id,
-            'username': RecipeTests.user.username,
+            'email': RecipeTests.another_user.email,
+            'id': RecipeTests.another_user.id,
+            'username': RecipeTests.another_user.username,
             'first_name': '',
             'last_name': '',
             'is_subscribed': True,
             'recipes': [
                 {
-                    'id': RecipeTests.recipe.id,
-                    'name': RecipeTests.recipe.name,
-                    'image': RecipeTests.recipe.image.url,
-                    'cooking_time': RecipeTests.recipe.cooking_time
+                    'id': RecipeTests.another_recipe.id,
+                    'name': RecipeTests.another_recipe.name,
+                    'image': RecipeTests.another_recipe.image.url,
+                    'cooking_time': RecipeTests.another_recipe.cooking_time
                 }
             ],
-            'recipes_count': RecipeTests.user.recipes.count()
+            'recipes_count': RecipeTests.another_user.recipes.count()
         }
 
         # Guest can't see the subscriptions list
@@ -351,7 +351,7 @@ class RecipeTests(Fixture):
         self.assertIsNotNone(guest_response.data.get('detail'))
 
         # The user can see who he is subscribed to.
-        response = self.authorized_client_second.get(url, format='json')
+        response = self.authorized_client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             json.loads(
@@ -455,3 +455,36 @@ class RecipeTests(Fixture):
                            f'{rec_ing_mes}\n\n'
                            f'{SHOPPING_CART_FOOTER}')
         self.assertEqual(response.content.decode(), expected_output)
+
+    def test_api_subscriptions_pagination(self):
+        """Pagination on subscriptions page works correct."""
+        url = reverse('api:users-subscriptions')
+        test_user = User.objects.create_user(username='third')
+        Follow.objects.create(user=RecipeTests.user, author=test_user)
+        count_of_user_follows = Follow.objects.filter(
+            user=RecipeTests.user).count()
+
+        # Page without page query params works correct.
+        response = self.authorized_client.get(url, format='json')
+        self.assertEqual(len(response.data.get('results')),
+                         count_of_user_follows)
+
+        # Pagination with query param works correct.
+        response = self.authorized_client.get(url + '?page=1&limit=1',
+                                              format='json')
+        self.assertEqual(len(response.data.get('results')), 1)
+
+    def test_api_recipe_pagination(self):
+        """Pagination on recipe list works correct."""
+        url = reverse('api:recipes-list')
+        limit = 6
+
+        response = self.guest_client.get(url + f'?page=1&limit={limit}',
+                                         format='json')
+        self.assertEqual(len(response.data.get('results')), limit)
+
+        expected_recipe_count = Recipe.objects.count() - limit
+        response = self.guest_client.get(url + f'?page=2&limit={limit}',
+                                         format='json')
+        self.assertEqual(len(response.data.get('results')),
+                         expected_recipe_count)

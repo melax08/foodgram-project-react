@@ -56,6 +56,30 @@ class Fixture(APITestCase):
         cls.follow = Follow.objects.create(user=cls.user,
                                            author=cls.another_user)
 
+        objects_list = (Recipe(author=cls.user,
+                               name=f'Fried chicken №{number}',
+                               text='Nice taste',
+                               cooking_time=10) for number in range(
+            settings.REST_FRAMEWORK.get('PAGE_SIZE')))
+        Recipe.objects.bulk_create(objects_list)
+        Favorite.objects.create(user=cls.another_user,
+                                recipe=Recipe.objects.get(
+                                    name='Fried chicken №2'))
+        Favorite.objects.create(user=cls.another_user,
+                                recipe=Recipe.objects.get(
+                                    name='Fried chicken №4'))
+        Cart.objects.create(user=cls.another_user,
+                            recipe=Recipe.objects.get(
+                                name='Fried chicken №0'))
+        Cart.objects.create(user=cls.another_user,
+                            recipe=Recipe.objects.get(
+                                name='Fried chicken №1'))
+        cls.another_recipe = Recipe.objects.create(author=cls.another_user,
+                                                   name='Kebab',
+                                                   image=base64img,
+                                                   text='well done',
+                                                   cooking_time=55)
+
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
