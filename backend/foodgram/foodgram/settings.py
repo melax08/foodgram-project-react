@@ -113,7 +113,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'core.pagination.CustomPagination',
     'PAGE_SIZE': 6,
-    'SEARCH_PARAM': 'name'
+    'SEARCH_PARAM': 'name',
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
 
 DJOSER = {

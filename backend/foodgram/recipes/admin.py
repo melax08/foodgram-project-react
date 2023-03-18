@@ -15,7 +15,7 @@ class IngredientInlineAdmin(admin.TabularInline):
     model = Recipe.ingredients.through
 
 
-class RecipeAdmin(admin.ModelAdmin):
+class RecipeAdmin(admin.ModelAdmin):   # pragma: no cover
     """Settings for recipe in admin panel."""
     list_display = ('name', 'author')
     list_filter = ('author', 'name', 'tags')

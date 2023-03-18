@@ -5,7 +5,7 @@ from .models import Follow, User
 
 
 @admin.register(User)
-class CustomUserAdmin(UserAdmin):
+class CustomUserAdmin(UserAdmin):    # pragma: no cover
     """Custom settings for admin panel with restrict some access to staff."""
     list_filter = ('email', 'username')
 

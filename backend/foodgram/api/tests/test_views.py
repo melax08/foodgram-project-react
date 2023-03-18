@@ -36,7 +36,7 @@ class RecipeTests(Fixture):
         }
         # Authenticated user can create a recipe.
         auth_response = self.authorized_client.post(
-            reverse('api:recipes-list'), data, format='json')
+            reverse('api:recipes-list'), data)
         self.assertEqual(auth_response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Recipe.objects.count(), current_recipes_count + 1)
         self.assertEqual(Recipe.objects.first().name, 'Boiled potato')
@@ -46,7 +46,7 @@ class RecipeTests(Fixture):
 
         # Anonymous can't create a recipe
         anonim_response = self.guest_client.post(
-            reverse('api:recipes-list'), data, format='json')
+            reverse('api:recipes-list'), data)
         self.assertEqual(anonim_response.status_code,
                          status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(Recipe.objects.count(), current_recipes_count + 1)
@@ -87,7 +87,7 @@ class RecipeTests(Fixture):
         client = self.authorized_client if is_auth else self.guest_client
         for url, status_code in urls.items():
             with self.subTest(url=url):
-                response = client.get(url, format='json')
+                response = client.get(url)
                 self.assertEqual(response.status_code, status_code[is_auth])
 
     def test_api_anonymous_user_requests(self):
@@ -109,9 +109,7 @@ class RecipeTests(Fixture):
             "last_name": "another",
             "password": "VerYHaRd12"
         }
-        response = self.guest_client.post(reverse('api:users-list'),
-                                          data,
-                                          format='json')
+        response = self.guest_client.post(reverse('api:users-list'), data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(User.objects.count(), current_users_count + 1)
         self.assertEqual(User.objects.last().username, 'another')
@@ -128,8 +126,7 @@ class RecipeTests(Fixture):
         }
         response = self.authorized_client.post(
             reverse('api:users-set-password'),
-            data,
-            format='json'
+            data
         )
         user = User.objects.get(username=RecipeTests.user.username)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -156,9 +153,7 @@ class RecipeTests(Fixture):
         }
 
         # Test login
-        response = self.guest_client.post('/api/auth/token/login/',
-                                          data,
-                                          format='json')
+        response = self.guest_client.post('/api/auth/token/login/', data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         new_user_token = Token.objects.get(user__username=user.username).key
         self.assertEqual(response.data.get('auth_token'), new_user_token)
@@ -190,11 +185,7 @@ class RecipeTests(Fixture):
         url = reverse('api:recipes-detail', kwargs={
             'pk': RecipeTests.recipe.id})
 
-        response = self.authorized_client.patch(
-            url,
-            data,
-            format='json'
-        )
+        response = self.authorized_client.patch(url, data)
 
         # Author can modify recipe
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -204,7 +195,7 @@ class RecipeTests(Fixture):
 
         # Guest can't modify recipes
         data['text'] = 'Guest recipe!!!'
-        guest_response = self.guest_client.patch(url, data, format='json')
+        guest_response = self.guest_client.patch(url, data)
         self.assertEqual(guest_response.status_code,
                          status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(Recipe.objects.get(id=RecipeTests.recipe.id).text,
@@ -213,11 +204,7 @@ class RecipeTests(Fixture):
 
         # Only author can modify recipe
         data['text'] = "I also can change someone else's recipe!"
-        another_user_response = self.authorized_client_second.patch(
-            url,
-            data,
-            format='json'
-        )
+        another_user_response = self.authorized_client_second.patch(url, data)
         self.assertEqual(another_user_response.status_code,
                          status.HTTP_403_FORBIDDEN)
         self.assertEqual(Recipe.objects.get(id=RecipeTests.recipe.id).text,
@@ -345,13 +332,13 @@ class RecipeTests(Fixture):
         }
 
         # Guest can't see the subscriptions list
-        guest_response = self.guest_client.get(url, format='json')
+        guest_response = self.guest_client.get(url)
         self.assertEqual(guest_response.status_code,
                          status.HTTP_401_UNAUTHORIZED)
         self.assertIsNotNone(guest_response.data.get('detail'))
 
         # The user can see who he is subscribed to.
-        response = self.authorized_client.get(url, format='json')
+        response = self.authorized_client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             json.loads(
@@ -465,13 +452,12 @@ class RecipeTests(Fixture):
             user=RecipeTests.user).count()
 
         # Page without page query params works correct.
-        response = self.authorized_client.get(url, format='json')
+        response = self.authorized_client.get(url)
         self.assertEqual(len(response.data.get('results')),
                          count_of_user_follows)
 
         # Pagination with query param works correct.
-        response = self.authorized_client.get(url + '?page=1&limit=1',
-                                              format='json')
+        response = self.authorized_client.get(url + '?page=1&limit=1')
         self.assertEqual(len(response.data.get('results')), 1)
 
     def test_api_recipe_pagination(self):
@@ -479,12 +465,10 @@ class RecipeTests(Fixture):
         url = reverse('api:recipes-list')
         limit = 6
 
-        response = self.guest_client.get(url + f'?page=1&limit={limit}',
-                                         format='json')
+        response = self.guest_client.get(url + f'?page=1&limit={limit}')
         self.assertEqual(len(response.data.get('results')), limit)
 
         expected_recipe_count = Recipe.objects.count() - limit
-        response = self.guest_client.get(url + f'?page=2&limit={limit}',
-                                         format='json')
+        response = self.guest_client.get(url + f'?page=2&limit={limit}')
         self.assertEqual(len(response.data.get('results')),
                          expected_recipe_count)
