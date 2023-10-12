@@ -126,6 +126,7 @@ class RecipeViewSet(ModelViewSet):
         user_cart_ingredients = user_cart.values(
             'ingredient__name',
             'ingredient__measurement_unit').annotate(total=Sum('amount'))
+
         text = [SHOPPING_CART_HEADER]
         text.extend([f'{ingredient["ingredient__name"]}'
                      f' - {ingredient["total"]} '
@@ -133,6 +134,7 @@ class RecipeViewSet(ModelViewSet):
                      for ingredient in user_cart_ingredients])
         text.append(f'\n{SHOPPING_CART_FOOTER}')
         text = '\n'.join(text)
+
         response = HttpResponse(text, content_type='text/plain')
         response['Content-Disposition'] = (
             f'attachment; filename={SHOPPING_CART_FILENAME}')

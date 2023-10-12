@@ -38,13 +38,13 @@
 1. Клонируем репозиторий с проектом на удаленном сервере:
 
 ```
-git clone https://github.com/melax08/recipes-site.git
+git clone https://github.com/melax08/recipes_site.git
 ```
 
 2. Переходим в каталог с инфраструктурными скриптами:
 
 ```
-cd recipes-site/infra
+cd recipes_site/infra
 ```
 
 3. Заполняем файл `.env` в соответствии с примером:
@@ -60,6 +60,12 @@ nano .env
 
 ```
 sudo docker-compose up -d
+```
+
+или
+
+```shell
+docker compose up -d
 ```
 
 ### Документация:
